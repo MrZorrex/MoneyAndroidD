@@ -18,10 +18,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Dialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.clickable
@@ -411,6 +413,7 @@ private fun DraggableCategoryList(
 }
 
 /** Полноэкранный редактор счёта. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryEditorDialog(
     editor: CategoryEditorState,
@@ -424,7 +427,12 @@ private fun CategoryEditorDialog(
     onActiveChange: (Boolean) -> Unit,
     onSave: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    // В Material 3 нет composable Dialog — только AlertDialog и BasicAlertDialog.
+    // BasicAlertDialog с usePlatformDefaultWidth = false даёт полноэкранное окно.
+    BasicAlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             shape = MaterialTheme.shapes.extraLarge,

@@ -3,6 +3,7 @@ package com.paysplit.app.ui.income
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -327,8 +328,10 @@ private fun DistributionTable(
     }
 }
 
+// RowScope нужен, чтобы Modifier.weight() работал внутри этих ячеек таблицы:
+// weight — расширение именно на RowScope/ColumnScope.
 @Composable
-private fun HeaderCell(text: String, weight: Float, align: TextAlign = TextAlign.Start) {
+private fun RowScope.HeaderCell(text: String, weight: Float, align: TextAlign = TextAlign.Start) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
@@ -341,7 +344,7 @@ private fun HeaderCell(text: String, weight: Float, align: TextAlign = TextAlign
 }
 
 @Composable
-private fun Cell(
+private fun RowScope.Cell(
     text: String,
     weight: Float,
     align: TextAlign = TextAlign.Start,
