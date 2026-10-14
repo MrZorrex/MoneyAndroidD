@@ -4,9 +4,6 @@ import com.paysplit.app.data.model.AppData
 import com.paysplit.app.data.model.CategoryEntity
 import com.paysplit.app.data.model.CategoryStatus
 import com.paysplit.app.data.model.CategoryType
-import com.paysplit.app.data.model.DistributionEntity
-import com.paysplit.app.data.model.ExpenseEntity
-import com.paysplit.app.data.model.TransferEntity
 import kotlin.math.max
 
 /**
@@ -150,13 +147,3 @@ object BalanceCalculator {
     /** Поступления за всё время. */
     fun totalIncomeAllTime(data: AppData): Double = data.incomes.sumOf { it.amount }
 }
-
-/** Небольшие помощники для фильтрации коллекций. */
-internal fun List<DistributionEntity>.inRange(from: Long, to: Long) =
-    filter { it.date in from..to }
-
-internal fun List<ExpenseEntity>.inRange(from: Long, to: Long) =
-    filter { it.date in from..to }
-
-internal fun List<TransferEntity>.inRange(from: Long, to: Long) =
-    filter { it.date in from..to }
