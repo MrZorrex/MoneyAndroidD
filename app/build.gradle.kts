@@ -87,6 +87,11 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.foundation)
     implementation(libs.androidx.material3)
+    // Иконки Material Icons. Начиная с Compose Material3 1.4.0 эта библиотека
+    // больше не поставляется транзитивно, поэтому подключается вручную.
+    // В проекте используются только базовые иконки (material-icons-core),
+    // material-icons-extended не нужен.
+    implementation(libs.androidx.compose.material.icons.core)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 

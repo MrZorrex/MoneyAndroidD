@@ -17,6 +17,10 @@ fragment = "1.8.9"
 
 # --- Compose ---
 composeBom = "2025.12.01"
+# Библиотека Material Icons официально устарела (Google рекомендует Material Symbols),
+# но артефакт по-прежнему публикуется. Версия задана явно, чтобы разрешение
+# зависимостей не зависело от того, входит ли material-icons-core в Compose BOM.
+composeMaterialIcons = "1.7.8"
 
 # --- Прочее ---
 coroutines = "1.10.2"
@@ -41,6 +45,9 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+# Material Icons: начиная с Compose Material3 1.4.0 (BOM 2025.09.01+) иконки
+# больше НЕ подтягиваются транзитивно, поэтому зависимость добавляется явно.
+androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "composeMaterialIcons" }
 
 # --- Lifecycle / Navigation ---
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }

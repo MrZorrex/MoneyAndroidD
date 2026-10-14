@@ -33,6 +33,7 @@
 - **Vico 2.4.3** — столбчатые и линейные графики (круговая диаграмма рисуется на Canvas)
 - **WorkManager** — вечерние напоминания
 - **Navigation Compose** — навигация между экранами
+- **Material Icons** (`material-icons-core`) — иконки интерфейса
 - **BiometricPrompt** — вход по отпечатку пальца
 - `minSdk = 35` (Android 15/16), `targetSdk = 36`, `compileSdk = 36`
 
@@ -170,6 +171,21 @@ Gradle JDK 17.
 (Android Studio обычно создаёт его сам).
 
 **Нет эмулятора.** Достаточно запустить на реальном телефоне с Android 15+.
+
+**Ошибки `Unresolved reference 'icons'` / `Unresolved reference 'Icons'`.**
+Начиная с Compose Material 3 1.4.0 библиотека `material-icons-core` больше не
+подтягивается транзитивно, поэтому в `gradle/libs.versions.toml` и
+`app/build.gradle.kts` она подключена явно:
+
+```kotlin
+implementation(libs.androidx.compose.material.icons.core)
+```
+
+Если вы удалили или закомментировали эту строку, или обновили Compose BOM и
+Gradle перестал находить версию 1.7.8, верните строку и укажите версию
+явно: `implementation("androidx.compose.material:material-icons-core:1.7.8")`.
+Библиотека официально устарела (Google рекомендует Material Symbols), но
+артефакт по-прежнему публикуется и работает.
 
 **Релизная подпись.** Сборка `assembleRelease` использует отладочный ключ.
 Чтобы публиковать приложение, создайте свой keystore и подключите его
