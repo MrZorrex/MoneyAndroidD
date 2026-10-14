@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Иконка для сплэш-экрана (рисуется на цветном фоне) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,20 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0" />
+
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M54,33 L54,58" />
+
+    <path
+        android:strokeColor="#FFB7F0D2"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M54,58 L36,80" />
+    <path
+        android:strokeColor="#FFB7F0D2"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M54,58 L72,80" />
+
+    <path
+        android:strokeColor="#FFB7F0D2"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M26,88 L46,88" />
+    <path
+        android:strokeColor="#FFB7F0D2"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M62,88 L82,88" />
+
+</vector>

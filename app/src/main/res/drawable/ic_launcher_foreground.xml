@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Логотип приложения: «денежный поток, который разделяется на счета».
+  Портретный вектор 108x108 (стандарт adaptive-icon).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- «Монета» сверху -->
+    <path
+        android:fillColor="#FF7BE0B8"
+        android:pathData="M54,20 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0" />
+
+    <!-- Вертикальная «труба» -->
+    <path
+        android:strokeColor="#FF7BE0B8"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M54,33 L54,58" />
+
+    <!-- Разделение на две ветки -->
+    <path
+        android:strokeColor="#FFE9C46A"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M54,58 L36,80" />
+    <path
+        android:strokeColor="#FFE9C46A"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M54,58 L72,80" />
+
+    <!-- «Счета» внизу -->
+    <path
+        android:strokeColor="#FFE9C46A"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M26,88 L46,88" />
+    <path
+        android:strokeColor="#FFE9C46A"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M62,88 L82,88" />
+
+</vector>
