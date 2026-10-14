@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">PaySplit</string>
+    <string name="app_tagline">Распределяй зарплату. Контролируй расходы.</string>
+
+    <!-- Каналы уведомлений -->
+    <string name="channel_reminder_name">Напоминания</string>
+    <string name="channel_reminder_desc">Вечернее напоминание записать расходы</string>
+    <string name="channel_alerts_name">Предупреждения</string>
+    <string name="channel_alerts_desc">Перерасход, близкие платежи и достигнутые цели</string>
+
+    <!-- Уведомления -->
+    <string name="notif_reminder_title">Пора записать расходы 📝</string>
+    <string name="notif_reminder_text">Откройте PaySplit и добавьте траты за сегодня, чтобы балансы счетов были точными.</string>
+    <string name="notif_overspend_title">Внимание: перерасход ⚠️</string>
+    <string name="notif_annual_title">Скоро платёж 📅</string>
+    <string name="notif_goal_title">Цель достигнута! 🎉</string>
+    <string name="notif_goal_text">Накопительный счёт «%1$s» набрал целевую сумму.</string>
+
+</resources>

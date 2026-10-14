@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="splash_background">#FF0F3D33</color>
+    <color name="ic_launcher_background">#FF0F3D33</color>
+
+    <!-- Стартовая тема: показывает сплэш-экран, затем передаёт управление Compose -->
+    <style name="Theme.PaySplit.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <item name="postSplashScreenTheme">@style/Theme.PaySplit</item>
+    </style>
+
+    <!-- Базовая тема Activity (все цвета задаёт Compose-тема) -->
+    <style name="Theme.PaySplit" parent="android:Theme.Material.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+</resources>
