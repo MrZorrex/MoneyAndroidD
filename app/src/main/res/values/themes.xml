@@ -12,8 +12,12 @@
         <item name="postSplashScreenTheme">@style/Theme.PaySplit</item>
     </style>
 
-    <!-- Базовая тема Activity (все цвета задаёт Compose-тема) -->
-    <style name="Theme.PaySplit" parent="android:Theme.Material.DayNight.NoActionBar">
+    <!--
+        Базовая тема Activity (светлая). Все цвета интерфейса задаёт Compose-тема,
+        эта тема отвечает только за окно, системные панели и сплэш-экран.
+        Тёмный вариант см. values-night/themes.xml.
+    -->
+    <style name="Theme.PaySplit" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

@@ -136,8 +136,6 @@ fun AnimatedProgress(
         color = color,
         trackColor = trackColor,
         strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
-        gapSize = 0.dp,
-        drawStopIndicator = {},
     )
 }
 
@@ -349,13 +347,11 @@ fun ExtendedFab(
     contentColor: Color = MaterialTheme.colorScheme.onPrimary,
 ) {
     ExtendedFloatingActionButton(
+        text = { Text(text = text, fontWeight = FontWeight.Bold) },
+        icon = { Icon(imageVector = icon, contentDescription = null) },
         onClick = onClick,
         modifier = modifier,
         containerColor = containerColor,
         contentColor = contentColor,
-    ) {
-        Icon(imageVector = icon, contentDescription = null)
-        Spacer(Modifier.width(8.dp))
-        Text(text = text, fontWeight = FontWeight.Bold)
-    }
+    )
 }

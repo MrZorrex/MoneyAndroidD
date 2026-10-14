@@ -90,7 +90,11 @@ object PayColors {
         @Composable get() = if (LocalIsDarkTheme.current) SemanticColors.NeutralDark
         else SemanticColors.NeutralLight
 
-    /** Цвет статуса категории. */
+    /**
+     * Цвет статуса категории. Функция composable, потому что использует
+     * composable-свойства [income], [expense], [warning] и [neutral].
+     */
+    @Composable
     fun ofStatus(status: com.paysplit.app.data.model.CategoryStatus): Color = when (status) {
         com.paysplit.app.data.model.CategoryStatus.FULL -> income
         com.paysplit.app.data.model.CategoryStatus.PARTIAL -> warning

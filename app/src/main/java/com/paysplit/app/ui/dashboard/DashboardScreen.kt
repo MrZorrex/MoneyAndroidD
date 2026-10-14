@@ -79,17 +79,12 @@ fun DashboardScreen(
                     Text("↔️ Перевод")
                 }
                 ExtendedFloatingActionButton(
+                    text = { Text(text = "Пришла зарплата!", fontWeight = FontWeight.Bold) },
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     onClick = hapticClick(onAddIncome),
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Пришла зарплата!",
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                )
             }
         },
     ) { padding ->

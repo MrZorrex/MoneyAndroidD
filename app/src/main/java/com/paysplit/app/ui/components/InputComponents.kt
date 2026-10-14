@@ -253,6 +253,7 @@ fun FormButtons(
  * Поле необязательной даты: нажатие открывает системный DatePicker,
  * повторное открытие диалога позволяет очистить значение.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OptionalDateField(
     date: Long?,
