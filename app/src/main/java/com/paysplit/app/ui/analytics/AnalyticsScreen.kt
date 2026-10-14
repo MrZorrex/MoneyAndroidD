@@ -213,7 +213,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.OverviewTab(
                 income = stats.months.map { it.income },
                 expense = stats.months.map { it.expense },
                 labels = state.monthLabels,
-                height = 220,
+                height = 220.dp,
             )
         }
     }
@@ -228,7 +228,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.OverviewTab(
             SignedBarChart(
                 values = stats.months.map { it.net },
                 labels = state.monthLabels,
-                height = 180,
+                height = 180.dp,
             )
         }
     }
@@ -345,7 +345,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.SavingsTab(state: Ana
                 AreaLineChart(
                     values = state.savingsGrowth.map { it.second },
                     labels = state.monthLabels,
-                    height = 180,
+                    height = 180.dp,
                 )
             } else {
                 EmptyState(
@@ -525,7 +525,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.TrendTab(
                 first = stats.months.map { it.income },
                 second = stats.months.map { it.expense },
                 labels = state.monthLabels,
-                height = 220,
+                height = 220.dp,
             )
         }
     }
@@ -557,7 +557,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.TrendTab(
             MonthlyColumnChart(
                 values = stats.months.map { it.income },
                 labels = state.monthLabels,
-                height = 200,
+                height = 200.dp,
             )
         }
     }

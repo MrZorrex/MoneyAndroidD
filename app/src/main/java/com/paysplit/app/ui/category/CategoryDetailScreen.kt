@@ -213,7 +213,7 @@ fun CategoryDetailScreen(
                         AreaLineChart(
                             values = state.monthlyBalance.map { it.second },
                             labels = state.monthLabels,
-                            height = 140,
+                            height = 140.dp,
                             lineColor = MaterialTheme.colorScheme.primary,
                         )
                     } else {
