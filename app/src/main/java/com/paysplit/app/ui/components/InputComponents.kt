@@ -44,6 +44,17 @@ fun parseMoney(text: String): Double? {
 }
 
 /**
+ * Первая буква — заглавная, остальное без изменений.
+ * Применяется к названиям счетов, трат и комментариям, чтобы текст
+ * всегда начинался с большой буквы. Повторное применение ничего не меняет.
+ */
+fun capitalizeFirst(text: String): String {
+    if (text.isEmpty()) return text
+    val upper = text[0].uppercaseChar()
+    return if (text[0] == upper) text else upper + text.substring(1)
+}
+
+/**
  * Большое поле ввода суммы с цифровой клавиатурой.
  * Принимает только цифры и один разделитель (запятая или точка).
  */

@@ -159,7 +159,9 @@ class AddIncomeViewModel(
 
     fun setSource(source: IncomeSource) = form.update { it.copy(source = source) }
 
-    fun setComment(comment: String) = form.update { it.copy(comment = comment) }
+    fun setComment(comment: String) = form.update {
+        it.copy(comment = com.paysplit.app.ui.components.capitalizeFirst(comment))
+    }
 
     /** Переход в режим ручной корректировки. */
     fun startManualAdjustment() {

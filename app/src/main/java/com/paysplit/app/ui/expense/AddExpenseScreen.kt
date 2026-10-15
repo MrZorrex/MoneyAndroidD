@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -183,7 +184,10 @@ fun AddExpenseScreen(
                 label = { Text("Название траты") },
                 placeholder = { Text("Пятёрочка, Стоматолог…") },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Next,
+                ),
             )
 
             if (state.titleSuggestions.isNotEmpty()) {
@@ -210,6 +214,9 @@ fun AddExpenseScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Комментарий (необязательно)") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
             )
 
             // --- Быстрые шаблоны ---

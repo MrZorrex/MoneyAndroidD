@@ -131,9 +131,13 @@ class AddExpenseViewModel(
 
     fun setAmount(text: String) = form.update { it.copy(amountText = text) }
 
-    fun setTitle(title: String) = form.update { it.copy(title = title) }
+    fun setTitle(title: String) = form.update {
+        it.copy(title = com.paysplit.app.ui.components.capitalizeFirst(title))
+    }
 
-    fun setComment(comment: String) = form.update { it.copy(comment = comment) }
+    fun setComment(comment: String) = form.update {
+        it.copy(comment = com.paysplit.app.ui.components.capitalizeFirst(comment))
+    }
 
     fun setDate(date: Long) = form.update { it.copy(date = date) }
 
@@ -151,7 +155,11 @@ class AddExpenseViewModel(
             }
             form.update {
                 it.copy(
-                    title = if (it.title.isBlank()) template else it.title,
+                    title = if (it.title.isBlank()) {
+                        com.paysplit.app.ui.components.capitalizeFirst(template)
+                    } else {
+                        it.title
+                    },
                     categoryId = category?.id ?: it.categoryId,
                 )
             }

@@ -98,7 +98,8 @@ class CategoriesViewModel(private val repository: PaySplitRepository) : ViewMode
         isActive: Boolean? = null,
     ) = editor.update { current ->
         val next = current.copy(
-            name = name ?: current.name,
+            name = name?.let { com.paysplit.app.ui.components.capitalizeFirst(it) }
+                ?: current.name,
             icon = icon ?: current.icon,
             planText = planText ?: current.planText,
             type = type ?: current.type,
