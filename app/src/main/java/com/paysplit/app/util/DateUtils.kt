@@ -62,7 +62,26 @@ object DateUtils {
 
     fun formatDayMonth(millis: Long): String = dayMonthFormat.format(localDate(millis))
 
-    fun formatTime(millis: Long): String = timeFormat.format(localDate(millis))
+    /**
+     * Время «HH:mm» для момента времени.
+     * Важно: форматируется именно время суток, а не дата — предыдущая реализация
+     * передавала LocalDate в форматтер времени и падала с DateTimeException,
+     * из-за чего закрывался экран истории при наличии операций.
+     */
+    fun formatTime(millis: Long): String =
+        timeFormat.format(Instant.ofEpochMilli(millis).atZone(zone).toLocalTime())
+
+    /**
+     * true, если у момента времени полночь (00:00) — т.е. хранится только дата,
+     * выбранная в календаре, без конкретного времени.
+     */
+    fun isMidnight(millis: Long): Boolean {
+        val time = Instant.ofEpochMilli(millis).atZone(zone).toLocalTime()
+        return time.hour == 0 && time.minute == 0
+    }
+
+    /** Начало суток, в которых находится момент времени. */
+    fun dayStart(millis: Long): Long = millisOf(localDate(millis))
 
     /** «Октябрь 2026». */
     fun formatMonth(yearMonth: YearMonth): String {

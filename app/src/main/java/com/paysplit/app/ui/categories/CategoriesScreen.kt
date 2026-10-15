@@ -59,9 +59,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.paysplit.app.data.model.CategoryType
 import com.paysplit.app.domain.BalanceCalculator
+import com.paysplit.app.domain.SavingsPlanner
 import com.paysplit.app.ui.LocalViewModelFactory
 import com.paysplit.app.ui.components.AnimatedProgress
 import com.paysplit.app.ui.components.CategoryAvatar
+import com.paysplit.app.ui.components.CategoryIconPicker
 import com.paysplit.app.ui.components.ConfirmDialog
 import com.paysplit.app.ui.components.DateField
 import com.paysplit.app.ui.components.OptionalDateField
@@ -75,13 +77,6 @@ import com.paysplit.app.ui.components.hapticClick
 import com.paysplit.app.ui.theme.PayColors
 import com.paysplit.app.util.Formatters
 import kotlin.math.roundToInt
-
-/** Доступные иконки для счёта. */
-private val AvailableIcons = listOf(
-    "💰", "🏠", "💡", "🛒", "🚗", "✈️", "💊", "👶",
-    "📱", "🎓", "🐱", "🎁", "🏦", "💼", "☕", "🎮",
-    "🛠️", "🧾", "💳", "📈",
-)
 
 /**
  * ЭКРАН 6 — Управление категориями (счетами).
@@ -173,7 +168,7 @@ fun CategoriesScreen(
                 DraggableCategoryList(
                     items = state.items,
                     currency = state.currency,
-                    onEdit = { viewModel.openEdit(it.category) },
+                    onEdit = { viewModel.openEdit(it.category, it.allTimeBalance) },
                     onDelete = { categoryToDelete = it },
                     onOrderApplied = { ids -> viewModel.applyOrder(ids) },
                 )
@@ -193,13 +188,14 @@ fun CategoriesScreen(
     if (editor.visible) {
         CategoryEditorDialog(
             editor = editor,
+            currency = state.currency,
             onDismiss = viewModel::dismissEditor,
             onNameChange = { viewModel.updateEditor(name = it) },
             onIconChange = { viewModel.updateEditor(icon = it) },
             onPlanChange = { viewModel.updateEditor(planText = it) },
             onTypeChange = { viewModel.updateEditor(type = it) },
             onTargetChange = { viewModel.updateEditor(targetText = it) },
-            onTargetDateChange = { viewModel.updateEditor(targetDate = it) },
+            onTargetDateChange = viewModel::setEditorTargetDate,
             onActiveChange = { viewModel.updateEditor(isActive = it) },
             onSave = viewModel::saveEditor,
         )
@@ -413,11 +409,33 @@ private fun DraggableCategoryList(
     }
 }
 
+/** Подсказка с автоматическим расчётом месячного плана из цели и даты. */
+@Composable
+private fun SavingsPlanHint(
+    editor: CategoryEditorState,
+    currency: String,
+) {
+    if (editor.type != CategoryType.SAVINGS) return
+    val target = com.paysplit.app.ui.components.parseMoney(editor.targetText) ?: return
+    val date = editor.targetDate ?: return
+    if (target <= 0.0) return
+    val months = SavingsPlanner.monthsLeft(date)
+    val plan = SavingsPlanner.monthlyPlan(target, editor.savedAmount, date)
+    Text(
+        text = "💡 До цели осталось: $months ${SavingsPlanner.monthsWord(months)} — " +
+            "нужно откладывать ${Formatters.money(plan, currency)} в месяц. " +
+            "План пересчитывается сам при изменении цели или даты.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
 /** Полноэкранный редактор счёта. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryEditorDialog(
     editor: CategoryEditorState,
+    currency: String,
     onDismiss: () -> Unit,
     onNameChange: (String) -> Unit,
     onIconChange: (String) -> Unit,
@@ -471,16 +489,10 @@ private fun CategoryEditorDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(6.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(AvailableIcons.size) { index ->
-                            val icon = AvailableIcons[index]
-                            FilterChip(
-                                selected = editor.icon == icon,
-                                onClick = { onIconChange(icon) },
-                                label = { Text(icon) },
-                            )
-                        }
-                    }
+                    CategoryIconPicker(
+                        selected = editor.icon,
+                        onSelect = onIconChange,
+                    )
                 }
 
                 item {
@@ -536,6 +548,9 @@ private fun CategoryEditorDialog(
                             onDateChange = onTargetDateChange,
                             label = "Дата цели",
                         )
+                    }
+                    item {
+                        SavingsPlanHint(editor = editor, currency = currency)
                     }
                 }
 

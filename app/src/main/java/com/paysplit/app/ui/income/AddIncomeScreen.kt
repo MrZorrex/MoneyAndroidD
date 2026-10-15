@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -43,6 +44,7 @@ import com.paysplit.app.PaySplitApplication
 import com.paysplit.app.data.model.IncomeSource
 import com.paysplit.app.ui.LocalViewModelFactory
 import com.paysplit.app.ui.components.CategoryAvatar
+import com.paysplit.app.ui.components.CategorySettingsDialog
 import com.paysplit.app.ui.components.ChipRow
 import com.paysplit.app.ui.components.DateField
 import com.paysplit.app.ui.components.MoneyInputField
@@ -74,6 +76,7 @@ fun AddIncomeScreen(
         },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var editingCategoryId by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(state.saved) {
         if (state.saved) onDone()
@@ -165,6 +168,7 @@ fun AddIncomeScreen(
                     DistributionTable(
                         state = state,
                         viewModel = viewModel,
+                        onEditCategory = { editingCategoryId = it },
                     )
 
                     if (state.surplus > 0.005) {
@@ -241,22 +245,51 @@ fun AddIncomeScreen(
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
+
+    val editingCategory = editingCategoryId?.let { state.categoryById[it] }
+    if (editingCategory != null) {
+        CategorySettingsDialog(
+            category = editingCategory,
+            currency = state.currency,
+            onDismiss = { editingCategoryId = null },
+            onSave = { updated ->
+                // План или активность изменились — ручные суммы больше не актуальны.
+                if (updated.monthlyPlan != editingCategory.monthlyPlan ||
+                    updated.isActive != editingCategory.isActive
+                ) {
+                    viewModel.resetAuto()
+                }
+                viewModel.saveCategory(updated)
+                editingCategoryId = null
+            },
+        )
+    }
 }
+
+/** Ширина кнопки редактирования категории в строке таблицы распределения. */
+private val EditButtonWidth = 44.dp
 
 @Composable
 private fun DistributionTable(
     state: AddIncomeUiState,
     viewModel: AddIncomeViewModel,
+    onEditCategory: (Long) -> Unit,
 ) {
-    val manualInputs = remember { mutableStateMapOf<Long, String>() }
+    // Текстовые поля ручного ввода пересоздаются при каждом входе в ручной режим,
+    // чтобы совпадать с заново рассчитанными суммами.
+    val manualInputs = remember(state.manualMode) { mutableStateMapOf<Long, String>() }
 
     Column {
         // Заголовок таблицы
-        Row(modifier = Modifier.fillMaxWidth()) {
-            HeaderCell("Категория", 2.2f)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HeaderCell("Категория", 2.0f)
             HeaderCell("План", 1f, TextAlign.End)
-            HeaderCell("Уже", 1f, TextAlign.End)
-            HeaderCell("Сейчас", 1.2f, TextAlign.End)
+            HeaderCell("Уже", 0.9f, TextAlign.End)
+            HeaderCell("Сейчас", 1.1f, TextAlign.End)
+            Spacer(Modifier.width(EditButtonWidth))
         }
         Spacer(Modifier.height(6.dp))
 
@@ -267,10 +300,14 @@ private fun DistributionTable(
                     .padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CategoryAvatar(
-                    icon = allocation.icon,
-                    size = 32,
-                    modifier = Modifier.weight(2.2f),
+                CategoryAvatar(icon = allocation.icon, size = 30)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = allocation.categoryName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(2.0f),
                 )
                 Cell(
                     text = Formatters.money(allocation.plan, ""),
@@ -279,7 +316,7 @@ private fun DistributionTable(
                 )
                 Cell(
                     text = Formatters.money(allocation.alreadyAllocated, ""),
-                    weight = 1f,
+                    weight = 0.9f,
                     align = TextAlign.End,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -297,7 +334,7 @@ private fun DistributionTable(
                             }
                         },
                         modifier = Modifier
-                            .weight(1.2f)
+                            .weight(1.1f)
                             .padding(start = 4.dp),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyMedium,
@@ -309,11 +346,18 @@ private fun DistributionTable(
                 } else {
                     Cell(
                         text = Formatters.money(allocation.amount, ""),
-                        weight = 1.2f,
+                        weight = 1.1f,
                         align = TextAlign.End,
                         bold = true,
                         color = PayColors.income,
                     )
+                }
+                TextButton(
+                    onClick = { onEditCategory(allocation.categoryId) },
+                    modifier = Modifier.width(EditButtonWidth),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                ) {
+                    Text("✏️")
                 }
             }
         }

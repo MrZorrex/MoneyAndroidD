@@ -267,21 +267,38 @@ data class DonutSlice(
     val label: String,
 )
 
+/**
+ * Кольцевая диаграмма расходов.
+ *
+ * Гарантии отрисовки:
+ * — нулевые значения не рисуются и не влияют на доли;
+ * — один сектор занимает дугу по своей доле (при 100 % — полное кольцо);
+ * — между секторами оставляется видимый зазор, цвета не сливаются;
+ * — под секторами всегда есть приглушённое кольцо-подложка.
+ */
 @Composable
 fun DonutChart(
     slices: List<DonutSlice>,
     modifier: Modifier = Modifier,
     total: Double = slices.sumOf { it.value },
     strokeWidth: Dp = 26.dp,
+    chartSize: Dp = 180.dp,
+    gapDegrees: Float = 3f,
+    trackColor: Color = Color.Gray.copy(alpha = 0.18f),
     centerContent: @Composable (() -> Unit)? = null,
 ) {
-    val animation by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(durationMillis = 700),
-        label = "donut",
-    )
+    val visible = remember(slices) { slices.filter { it.value > 0.0 } }
+    val sum = visible.sumOf { it.value }
+    val effectiveTotal = maxOf(total, sum)
+
+    val animation = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(visible) {
+        animation.snapTo(0f)
+        animation.animateTo(1f, tween(durationMillis = 700))
+    }
+
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.size(180.dp)) {
+        Canvas(modifier = Modifier.size(chartSize)) {
             val stroke = strokeWidth.toPx()
             val diameter = size.minDimension - stroke
             val topLeft = Offset(
@@ -289,47 +306,74 @@ fun DonutChart(
                 y = (size.height - diameter) / 2f,
             )
             val arcSize = Size(diameter, diameter)
-            if (total <= 0.0) {
+            val style = Stroke(width = stroke, cap = StrokeCap.Butt)
+
+            // Подложка: полное кольцо (видно и при пустых данных).
+            drawArc(
+                color = trackColor,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = style,
+            )
+            if (sum <= 0.0 || visible.isEmpty() || effectiveTotal <= 0.0) return@Canvas
+            val progress = animation.value
+            if (progress <= 0f) return@Canvas
+
+            if (visible.size == 1) {
+                val sweep = (sum / effectiveTotal * 360.0).toFloat() * progress
                 drawArc(
-                    color = Color.Gray.copy(alpha = 0.25f),
-                    startAngle = 0f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = stroke, cap = StrokeCap.Round),
-                )
-                return@Canvas
-            }
-            var startAngle = -90f
-            slices.forEach { slice ->
-                val sweep = (slice.value / total * 360.0).toFloat() * animation
-                drawArc(
-                    color = slice.color,
-                    startAngle = startAngle,
+                    color = visible.first().color,
+                    startAngle = -90f,
                     sweepAngle = sweep,
                     useCenter = false,
                     topLeft = topLeft,
                     size = arcSize,
-                    style = Stroke(width = stroke, cap = StrokeCap.Butt),
+                    style = style,
                 )
-                startAngle += sweep
+                return@Canvas
+            }
+
+            val available = 360f - gapDegrees * visible.size
+            var startAngle = -90f + gapDegrees / 2f
+            visible.forEach { slice ->
+                val fullSweep = (slice.value / effectiveTotal * available).toFloat()
+                val sweep = fullSweep * progress
+                if (sweep > 0.3f) {
+                    drawArc(
+                        color = slice.color,
+                        startAngle = startAngle,
+                        sweepAngle = sweep,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = style,
+                    )
+                }
+                startAngle += fullSweep + gapDegrees
             }
         }
         if (centerContent != null) centerContent()
     }
 }
 
-/** Легенда под круговой диаграммой. */
+/**
+ * Легенда под круговой диаграммой.
+ * Проценты считаются методом наибольшего остатка с точностью до десятых,
+ * поэтому в сумме всегда дают ровно 100 %.
+ */
 @Composable
 fun DonutLegend(
     slices: List<DonutSlice>,
-    total: Double,
     modifier: Modifier = Modifier,
     currency: String = "₽",
 ) {
+    val visible = remember(slices) { slices.filter { it.value > 0.0 } }
+    val percents = remember(visible) { sharePercentsTenths(visible.map { it.value }) }
     Column(modifier = modifier.fillMaxWidth()) {
-        slices.forEach { slice ->
+        visible.forEachIndexed { index, slice ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -338,7 +382,7 @@ fun DonutLegend(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(12.dp)
+                        .size(14.dp)
                         .clip(CircleShape)
                         .background(slice.color),
                 )
@@ -355,15 +399,34 @@ fun DonutLegend(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = Formatters.percent(
-                        if (total <= 0.0) 0f else (slice.value / total).toFloat(),
-                    ),
+                    text = Formatters.percent(percents.getOrElse(index) { 0 } / 1000f),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
     }
+}
+
+/**
+ * Доли значений в десятых долях процента (978 = 97,8 %).
+ * Метод наибольшего остатка: в сумме всегда ровно 1000 (= 100 %).
+ */
+private fun sharePercentsTenths(values: List<Double>): List<Int> {
+    if (values.isEmpty()) return emptyList()
+    val sum = values.sum()
+    if (sum <= 0.0) return List(values.size) { 0 }
+    val exact = values.map { it / sum * 1000.0 }
+    val floored = exact.map { it.toInt() }.toMutableList()
+    var rest = 1000 - floored.sum()
+    val order = exact.indices.sortedByDescending { exact[it] - floored[it] }
+    var i = 0
+    while (rest > 0 && order.isNotEmpty()) {
+        floored[order[i % order.size]] += 1
+        rest--
+        i++
+    }
+    return floored
 }
 
 // ---------------------------------------------------------------------------

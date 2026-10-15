@@ -99,6 +99,11 @@ class CategoryDetailViewModel(
         viewModelScope.launch { repository.deleteCategory(categoryId) }
     }
 
+    /** Сохранение настроек счёта (название, картинка, план на месяц и т.д.). */
+    fun saveCategory(updated: com.paysplit.app.data.model.CategoryEntity) {
+        viewModelScope.launch { repository.saveCategory(updated.copy(id = categoryId)) }
+    }
+
     fun deleteTransaction(transaction: UiTransaction) {
         viewModelScope.launch {
             when (transaction.type) {

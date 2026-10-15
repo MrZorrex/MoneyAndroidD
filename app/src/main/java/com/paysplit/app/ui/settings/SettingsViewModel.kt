@@ -159,6 +159,18 @@ class SettingsViewModel(
         }
     }
 
+    /** Полный сброс приложения — как при первом запуске (включая настройки). */
+    fun fullReset() {
+        viewModelScope.launch {
+            busy.value = true
+            runCatching {
+                repository.fullReset()
+                message.value = "Приложение сброшено к первому запуску"
+            }.onFailure { message.value = "Ошибка: ${it.message}" }
+            busy.value = false
+        }
+    }
+
     fun resetCategories() {
         viewModelScope.launch {
             busy.value = true

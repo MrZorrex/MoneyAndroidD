@@ -33,6 +33,7 @@ import com.paysplit.app.data.model.UiTransaction
 import com.paysplit.app.ui.LocalViewModelFactory
 import com.paysplit.app.ui.components.CategoryAvatar
 import com.paysplit.app.ui.components.ConfirmDialog
+import com.paysplit.app.ui.components.DateField
 import com.paysplit.app.ui.components.EmptyState
 import com.paysplit.app.ui.components.PayCard
 import com.paysplit.app.ui.components.PayTopBar
@@ -71,6 +72,29 @@ fun HistoryScreen(
                     selected = state.filters.period,
                     onSelect = viewModel::setPeriod,
                 )
+                if (state.filters.period == HistoryPeriod.CUSTOM) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            DateField(
+                                date = state.filters.customFrom,
+                                onDateChange = {
+                                    viewModel.setCustomRange(it, state.filters.customTo)
+                                },
+                                label = "С даты",
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            DateField(
+                                date = state.filters.customTo,
+                                onDateChange = {
+                                    viewModel.setCustomRange(state.filters.customFrom, it)
+                                },
+                                label = "По дату",
+                            )
+                        }
+                    }
+                }
 
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -280,6 +304,19 @@ private fun DayHeader(group: DayGroup, currency: String) {
     }
 }
 
+/**
+ * Подпись под операцией: категория, время (только если оно реально сохранено,
+ * а не полночь из календаря) и комментарий.
+ */
+private fun historySubtitle(transaction: UiTransaction): String {
+    val parts = mutableListOf(transaction.categoryName)
+    if (!DateUtils.isMidnight(transaction.date)) {
+        parts += DateUtils.formatTime(transaction.date)
+    }
+    transaction.comment?.takeIf { it.isNotBlank() }?.let { parts += it }
+    return parts.joinToString(" · ")
+}
+
 @Composable
 private fun HistoryRow(
     transaction: UiTransaction,
@@ -301,7 +338,7 @@ private fun HistoryRow(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = "${transaction.categoryName} · ${DateUtils.formatTime(transaction.date)}",
+                text = historySubtitle(transaction),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

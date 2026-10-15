@@ -91,8 +91,13 @@ class HistoryViewModel(private val repository: PaySplitRepository) : ViewModel()
 
     fun setCategory(categoryId: Long?) = filters.update { it.copy(categoryId = categoryId) }
 
-    fun setCustomRange(from: Long, to: Long) =
-        filters.update { it.copy(period = HistoryPeriod.CUSTOM, customFrom = from, customTo = to) }
+    fun setCustomRange(from: Long, to: Long) {
+        // Нормализация: начало не должно быть позже конца.
+        val (start, end) = if (from <= to) from to to else to to from
+        filters.update {
+            it.copy(period = HistoryPeriod.CUSTOM, customFrom = start, customTo = end)
+        }
+    }
 
     fun delete(transaction: UiTransaction) {
         viewModelScope.launch {
@@ -130,9 +135,21 @@ class HistoryViewModel(private val repository: PaySplitRepository) : ViewModel()
 
             HistoryPeriod.ALL -> 0L to Long.MAX_VALUE
 
-            HistoryPeriod.CUSTOM ->
-                (if (f.customFrom == 0L) DateUtils.monthStartMonthsBack(2, now) else f.customFrom) to
-                    (if (f.customTo == 0L) now else f.customTo)
+            HistoryPeriod.CUSTOM -> {
+                val from = if (f.customFrom == 0L) {
+                    DateUtils.monthStartMonthsBack(2, now)
+                } else {
+                    f.customFrom
+                }
+                // customTo — начало выбранных суток: расширяем до конца суток,
+                // чтобы операции последнего дня тоже попадали в выборку.
+                val to = if (f.customTo == 0L) {
+                    now
+                } else {
+                    f.customTo + 24L * 60 * 60 * 1000 - 1
+                }
+                from to to
+            }
         }
     }
 }

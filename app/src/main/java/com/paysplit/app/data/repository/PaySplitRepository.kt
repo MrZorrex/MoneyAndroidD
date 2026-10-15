@@ -194,16 +194,29 @@ class PaySplitRepository(private val db: AppDatabase) {
         )
     }
 
-    /** Полная очистка данных (кроме настроек темы и онбординга). */
+    /**
+     * Удаление всех операций и категорий.
+     * Настройки приложения (тема, PIN, уведомления и т.д.) сохраняются,
+     * онбординг остаётся пройденным.
+     */
     suspend fun clearAllData() {
+        // Снимок настроек делается ДО очистки: после clearAllTables читать уже нечего.
+        val settings = settingsDao.get() ?: SettingsEntity()
         db.withTransaction {
             db.clearAllTables()
-            settingsDao.upsert(
-                SettingsEntity(
-                    onboardingCompleted = true,
-                    theme = settingsDao.get()?.theme ?: com.paysplit.app.data.model.ThemeMode.SYSTEM,
-                ),
-            )
+            settingsDao.upsert(settings.copy(onboardingCompleted = true))
+        }
+    }
+
+    /**
+     * Полный сброс приложения к состоянию первого запуска:
+     * удаляются все операции, категории и настройки, онбординг считается
+     * непройденным — после сброса снова показывается стартовый мастер.
+     */
+    suspend fun fullReset() {
+        db.withTransaction {
+            db.clearAllTables()
+            settingsDao.upsert(SettingsEntity())
         }
     }
 }

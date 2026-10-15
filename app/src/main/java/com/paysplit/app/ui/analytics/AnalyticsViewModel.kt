@@ -7,9 +7,10 @@ import com.paysplit.app.data.model.CategoryEntity
 import com.paysplit.app.data.repository.PaySplitRepository
 import com.paysplit.app.domain.AnalyticsEngine
 import com.paysplit.app.util.DateUtils
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.YearMonth
 
@@ -28,10 +29,10 @@ data class AnalyticsUiState(
 
 class AnalyticsViewModel(private val repository: PaySplitRepository) : ViewModel() {
 
-    var period: AnalyticsPeriod = AnalyticsPeriod.MONTH
-        private set
+    private val periodFlow = MutableStateFlow(AnalyticsPeriod.MONTH)
 
-    val state: StateFlow<AnalyticsUiState> = repository.data.map { data ->
+    val state: StateFlow<AnalyticsUiState> =
+        combine(repository.data, periodFlow) { data, period ->
         val to = System.currentTimeMillis()
         val from = DateUtils.monthStartMonthsBack(period.months - 1, to)
         val stats = AnalyticsEngine.compute(data, from, to)
@@ -58,6 +59,6 @@ class AnalyticsViewModel(private val repository: PaySplitRepository) : ViewModel
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AnalyticsUiState())
 
     fun setPeriod(value: AnalyticsPeriod) {
-        period = value
+        periodFlow.value = value
     }
 }

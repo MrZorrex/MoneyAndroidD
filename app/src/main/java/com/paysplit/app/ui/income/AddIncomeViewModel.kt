@@ -35,6 +35,8 @@ data class AddIncomeUiState(
     val undistributed: Double = 0.0,
     val manualMode: Boolean = false,
     val currency: String = "₽",
+    /** Все категории по id — для редактирования плана/картинки прямо на экране. */
+    val categoryById: Map<Long, CategoryEntity> = emptyMap(),
     val saved: Boolean = false,
     val error: String? = null,
 ) {
@@ -109,6 +111,7 @@ class AddIncomeViewModel(
             undistributed = max(0.0, amount - distributed),
             manualMode = f.manual != null,
             currency = data.settings.currency,
+            categoryById = data.categories.associateBy { it.id },
             saved = isSaved,
             error = when {
                 incomeId != 0L && editingIncome == null -> "Поступление не найдено"
@@ -186,6 +189,11 @@ class AddIncomeViewModel(
 
     /** Вернуться к автоматическому расчёту. */
     fun resetAuto() = form.update { it.copy(manual = null) }
+
+    /** Сохранение настроек категории прямо с экрана поступления. */
+    fun saveCategory(updated: CategoryEntity) {
+        viewModelScope.launch { repository.saveCategory(updated) }
+    }
 
     fun save() {
         viewModelScope.launch {

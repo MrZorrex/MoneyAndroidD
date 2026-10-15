@@ -51,19 +51,24 @@ object SemanticColors {
     val NeutralLight = Color(0xFF9E9E9E)
     val NeutralDark = Color(0xFF757575)
 
-    /** Палитра для секторов диаграмм. */
+    /**
+     * Палитра для секторов диаграмм.
+     * Цвета идут контрастными парами (зелёный → синий → оранжевый …),
+     * чтобы соседние секторы всегда заметно отличались друг от друга
+     * и на тёмной, и на светлой теме.
+     */
     val chartPalette = listOf(
-        Color(0xFF2E7D5B),
-        Color(0xFF4C9F70),
-        Color(0xFF7BC796),
-        Color(0xFFB8860B),
-        Color(0xFFE0A458),
-        Color(0xFF3D7EA6),
-        Color(0xFF6BA8C9),
-        Color(0xFF9C6ADE),
-        Color(0xFFC77DBB),
-        Color(0xFFD96A6A),
-        Color(0xFF8D9E63),
-        Color(0xFF607D8B),
+        Color(0xFF43A047),
+        Color(0xFF1E88E5),
+        Color(0xFFFB8C00),
+        Color(0xFF8E24AA),
+        Color(0xFFE53935),
+        Color(0xFF00ACC1),
+        Color(0xFFC0CA33),
+        Color(0xFFEC407A),
+        Color(0xFF6D4C41),
+        Color(0xFF5C6BC0),
+        Color(0xFF26A69A),
+        Color(0xFF78909C),
     )
 }

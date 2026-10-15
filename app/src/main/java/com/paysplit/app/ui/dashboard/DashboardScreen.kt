@@ -40,6 +40,7 @@ import com.paysplit.app.domain.BalanceCalculator
 import com.paysplit.app.ui.LocalViewModelFactory
 import com.paysplit.app.ui.components.AnimatedProgress
 import com.paysplit.app.ui.components.CategoryAvatar
+import com.paysplit.app.ui.components.CategorySettingsDialog
 import com.paysplit.app.ui.components.DonutChart
 import com.paysplit.app.ui.components.DonutLegend
 import com.paysplit.app.ui.components.DonutSlice
@@ -68,6 +69,7 @@ fun DashboardScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showTransfer by remember { mutableStateOf(false) }
+    var editingCategoryId by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -155,6 +157,7 @@ fun DashboardScreen(
                                     .padding(start = 8.dp),
                                 total = state.monthExpense,
                                 strokeWidth = 18.dp,
+                                chartSize = 150.dp,
                             )
                         }
                     }
@@ -170,7 +173,6 @@ fun DashboardScreen(
                                     label = "${item.icon} ${item.name}",
                                 )
                             },
-                            total = state.monthExpense,
                             currency = state.currency,
                         )
                     }
@@ -208,6 +210,7 @@ fun DashboardScreen(
                     balance = balance,
                     currency = state.currency,
                     onClick = { onCategoryClick(balance.category.id) },
+                    onEdit = { editingCategoryId = balance.category.id },
                 )
             }
 
@@ -231,6 +234,23 @@ fun DashboardScreen(
         TransferDialog(
             viewModel = viewModel,
             onDismiss = { showTransfer = false },
+        )
+    }
+
+    val editingBalance = editingCategoryId?.let { id ->
+        state.balances.firstOrNull { it.category.id == id }
+    }
+    val editingCategory = editingBalance?.category
+    if (editingCategory != null) {
+        CategorySettingsDialog(
+            category = editingCategory,
+            currency = state.currency,
+            currentBalance = editingBalance?.allTimeBalance ?: 0.0,
+            onDismiss = { editingCategoryId = null },
+            onSave = {
+                viewModel.saveCategory(it)
+                editingCategoryId = null
+            },
         )
     }
 }
@@ -309,6 +329,7 @@ private fun CategoryBalanceCard(
     balance: BalanceCalculator.CategoryBalance,
     currency: String,
     onClick: () -> Unit,
+    onEdit: () -> Unit,
 ) {
     val statusColor = PayColors.ofStatus(balance.status)
     val click = hapticClick(onClick)
@@ -384,6 +405,14 @@ private fun CategoryBalanceCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Button(
+                onClick = onEdit,
+                colors = ButtonDefaults.textButtonColors(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 8.dp,
+                    vertical = 0.dp,
+                ),
+            ) { Text("✏️ План") }
             Button(
                 onClick = click,
                 colors = ButtonDefaults.textButtonColors(),

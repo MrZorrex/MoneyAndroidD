@@ -83,6 +83,11 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
         return "Получено " + received + " из " + plan
     }
 
+    /** Сохранение настроек счёта (в т.ч. суммы на месяц) прямо с главной. */
+    fun saveCategory(updated: com.paysplit.app.data.model.CategoryEntity) {
+        viewModelScope.launch { repository.saveCategory(updated) }
+    }
+
     /** Перевод средств между счетами: расход на одном счёте и доход на другом. */
     fun transfer(fromCategoryId: Long, toCategoryId: Long, amount: Double) {
         viewModelScope.launch {

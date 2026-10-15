@@ -283,7 +283,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.ExpenseTab(
                             label = "${item.icon} ${item.name}",
                         )
                     },
-                    total = stats.totalExpense,
                     currency = state.currency,
                 )
             } else {

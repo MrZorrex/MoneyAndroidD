@@ -45,6 +45,7 @@ import com.paysplit.app.data.model.CategoryType
 import com.paysplit.app.data.model.UiTransaction
 import com.paysplit.app.ui.components.AnimatedProgress
 import com.paysplit.app.ui.components.CategoryAvatar
+import com.paysplit.app.ui.components.CategorySettingsDialog
 import com.paysplit.app.ui.components.ChipRow
 import com.paysplit.app.ui.components.ConfirmDialog
 import com.paysplit.app.ui.components.EmptyState
@@ -84,6 +85,7 @@ fun CategoryDetailScreen(
     var showExpenseDialog by remember { mutableStateOf(false) }
     var showTopUpDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     var transactionToDelete by remember { mutableStateOf<UiTransaction?>(null) }
 
     LaunchedEffect(state.deleted) {
@@ -100,6 +102,11 @@ fun CategoryDetailScreen(
                     "Расходный счёт"
                 },
                 onBack = onBack,
+                actions = {
+                    TextButton(onClick = { showSettingsDialog = true }) {
+                        Text("⚙️ Настройки")
+                    }
+                },
             )
         },
     ) { padding ->
@@ -311,6 +318,20 @@ fun CategoryDetailScreen(
             onConfirm = { fromId, amount ->
                 viewModel.topUp(fromId, amount)
                 showTopUpDialog = false
+            },
+        )
+    }
+
+    val editingCategory = state.balance?.category
+    if (showSettingsDialog && editingCategory != null) {
+        CategorySettingsDialog(
+            category = editingCategory,
+            currency = state.currency,
+            currentBalance = state.balance?.allTimeBalance ?: 0.0,
+            onDismiss = { showSettingsDialog = false },
+            onSave = {
+                viewModel.saveCategory(it)
+                showSettingsDialog = false
             },
         )
     }

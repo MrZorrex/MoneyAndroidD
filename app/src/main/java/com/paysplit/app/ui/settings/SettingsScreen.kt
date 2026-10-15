@@ -79,7 +79,9 @@ fun SettingsScreen(
     var showPinDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
+    var showFullResetDialog by remember { mutableStateOf(false) }
     var deleteConfirmText by remember { mutableStateOf("") }
+    var fullResetConfirmText by remember { mutableStateOf("") }
     var pendingRestart by remember { mutableStateOf(false) }
     // Локальный текст дохода: позволяет вводить дробную часть с запятой,
     // не теряя введённые символы при переформатировании значения из базы.
@@ -369,6 +371,22 @@ fun SettingsScreen(
                     ),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("🗑️ Удалить все данные") }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = hapticClick { showFullResetDialog = true },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("🔄 Полный сброс приложения") }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Вернуть приложение к состоянию первого запуска: удаляются " +
+                        "все операции, категории и настройки, снова показывается " +
+                        "стартовый мастер.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             // --- О приложении ---
@@ -429,6 +447,27 @@ fun SettingsScreen(
                 showDeleteAllDialog = false
                 deleteConfirmText = ""
             },
+        )
+    }
+
+    if (showFullResetDialog) {
+        DeleteAllDialog(
+            confirmText = fullResetConfirmText,
+            onConfirmTextChange = { fullResetConfirmText = it },
+            onDismiss = {
+                showFullResetDialog = false
+                fullResetConfirmText = ""
+            },
+            onConfirm = {
+                viewModel.fullReset()
+                showFullResetDialog = false
+                fullResetConfirmText = ""
+            },
+            title = "Полный сброс приложения",
+            text = "Будут удалены ВСЕ данные: доходы, расходы, переводы, категории " +
+                "и настройки (включая PIN-код). Приложение вернётся к состоянию " +
+                "первого запуска и покажет стартовый мастер. Действие необратимо.",
+            confirmButtonText = "Сбросить всё",
         )
     }
 }
@@ -561,15 +600,18 @@ private fun DeleteAllDialog(
     onConfirmTextChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
+    title: String = "Удаление всех данных",
+    text: String = "Будут удалены все доходы, расходы, переводы и категории. " +
+        "Настройки приложения сохранятся. Действие необратимо.",
+    confirmButtonText: String = "Удалить всё",
 ) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Удаление всех данных") },
+        title = { Text(title) },
         text = {
             Column {
                 Text(
-                    text = "Будут удалены все доходы, расходы, переводы и категории. " +
-                        "Настройки приложения сохранятся. Действие необратимо.",
+                    text = text,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -595,7 +637,7 @@ private fun DeleteAllDialog(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError,
                 ),
-            ) { Text("Удалить всё") }
+            ) { Text(confirmButtonText) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Отмена") }

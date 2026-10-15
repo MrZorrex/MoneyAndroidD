@@ -6,6 +6,7 @@ import com.paysplit.app.data.model.CategoryEntity
 import com.paysplit.app.data.model.CategoryType
 import com.paysplit.app.data.repository.PaySplitRepository
 import com.paysplit.app.domain.BalanceCalculator
+import com.paysplit.app.domain.SavingsPlanner
 import com.paysplit.app.util.DateUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,6 +38,8 @@ data class CategoryEditorState(
     val targetDate: Long? = null,
     val isActive: Boolean = true,
     val isSavings: Boolean = false,
+    /** Уже накоплено — вычитается из цели при авторасчёте месячного плана. */
+    val savedAmount: Double = 0.0,
 ) {
     val isEditing: Boolean get() = editingId != 0L
 }
@@ -67,7 +70,7 @@ class CategoriesViewModel(private val repository: PaySplitRepository) : ViewMode
         editor.value = CategoryEditorState(visible = true, icon = "💰")
     }
 
-    fun openEdit(category: CategoryEntity) {
+    fun openEdit(category: CategoryEntity, savedAmount: Double = 0.0) {
         editor.value = CategoryEditorState(
             visible = true,
             editingId = category.id,
@@ -79,6 +82,7 @@ class CategoriesViewModel(private val repository: PaySplitRepository) : ViewMode
             targetDate = category.targetDate,
             isActive = category.isActive,
             isSavings = category.type == CategoryType.SAVINGS,
+            savedAmount = savedAmount,
         )
     }
 
@@ -93,7 +97,7 @@ class CategoriesViewModel(private val repository: PaySplitRepository) : ViewMode
         targetDate: Long? = null,
         isActive: Boolean? = null,
     ) = editor.update { current ->
-        current.copy(
+        val next = current.copy(
             name = name ?: current.name,
             icon = icon ?: current.icon,
             planText = planText ?: current.planText,
@@ -103,6 +107,35 @@ class CategoriesViewModel(private val repository: PaySplitRepository) : ViewMode
             isActive = isActive ?: current.isActive,
             isSavings = (type ?: current.type) == CategoryType.SAVINGS,
         )
+        // Цель или тип изменились — пересчитываем месячный план автоматически.
+        // Ручная правка самого плана (planText) не перезаписывается.
+        if ((targetText != null || type != null) && next.type == CategoryType.SAVINGS) {
+            next.copy(planText = autoPlanText(next))
+        } else {
+            next
+        }
+    }
+
+    /** Установка даты цели (null — очистить) с пересчётом месячного плана. */
+    fun setEditorTargetDate(date: Long?) {
+        editor.update { current ->
+            val next = current.copy(targetDate = date)
+            if (next.type == CategoryType.SAVINGS) next.copy(planText = autoPlanText(next))
+            else next
+        }
+    }
+
+    /**
+     * Авторасчёт месячного плана из цели и даты.
+     * Если посчитать нельзя (нет цели/даты) — возвращает текущее значение поля,
+     * ручной ввод пользователя не трогаем.
+     */
+    private fun autoPlanText(state: CategoryEditorState): String {
+        val target = com.paysplit.app.ui.components.parseMoney(state.targetText)
+            ?: return state.planText
+        val date = state.targetDate ?: return state.planText
+        if (target <= 0.0) return state.planText
+        return formatAmount(SavingsPlanner.monthlyPlan(target, state.savedAmount, date))
     }
 
     fun saveEditor() {
