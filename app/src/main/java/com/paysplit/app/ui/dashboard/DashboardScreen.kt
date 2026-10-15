@@ -2,6 +2,7 @@ package com.paysplit.app.ui.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,11 +19,12 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -74,11 +77,11 @@ fun DashboardScreen(
     Scaffold(
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = hapticClick { showTransfer = true },
                     modifier = Modifier.padding(bottom = 12.dp),
                 ) {
-                    Text("↔️ Перевод")
+                    Text("↔️ Перевод", maxLines = 1)
                 }
                 ExtendedFloatingActionButton(
                     text = { Text(text = "Пришла зарплата!", fontWeight = FontWeight.Bold) },
@@ -142,23 +145,28 @@ fun DashboardScreen(
                             )
                         }
                         if (state.expenseByCategory.isNotEmpty()) {
-                            DonutChart(
-                                slices = state.expenseByCategory.mapIndexed { index, item ->
-                                    DonutSlice(
-                                        value = item.amount,
-                                        color = SemanticColors.chartPalette[
-                                            index % SemanticColors.chartPalette.size
-                                        ],
-                                        label = item.name,
-                                    )
-                                },
+                            BoxWithConstraints(
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(start = 8.dp),
-                                total = state.monthExpense,
-                                strokeWidth = 18.dp,
-                                chartSize = 150.dp,
-                            )
+                            ) {
+                                val chartSize = maxWidth.coerceAtMost(160.dp)
+                                DonutChart(
+                                    slices = state.expenseByCategory.mapIndexed { index, item ->
+                                        DonutSlice(
+                                            value = item.amount,
+                                            color = SemanticColors.chartPalette[
+                                                index % SemanticColors.chartPalette.size
+                                            ],
+                                            label = item.name,
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    total = state.monthExpense,
+                                    strokeWidth = 18.dp,
+                                    chartSize = chartSize,
+                                )
+                            }
                         }
                     }
                     if (state.expenseByCategory.isNotEmpty()) {
@@ -184,14 +192,29 @@ fun DashboardScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SectionHeader(
-                        title = "Счета",
-                        subtitle = "${state.balances.count { it.category.isActive }} активных",
-                        modifier = Modifier.weight(1f),
-                    )
-                    OutlinedButton(onClick = onOpenCategories) { Text("Управлять") }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = hapticClick(onAddExpense)) { Text("➕ Расход") }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Счета",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = "${state.balances.count { it.category.isActive }} активных",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    TextButton(onClick = onOpenCategories) {
+                        Text("Управлять", maxLines = 1)
+                    }
+                    Spacer(Modifier.width(4.dp))
+                    Button(onClick = hapticClick(onAddExpense)) {
+                        Text("➕ Расход", maxLines = 1)
+                    }
                 }
             }
 
@@ -294,6 +317,7 @@ private fun MonthHeaderCard(state: DashboardUiState) {
                     value = state.totalBalance,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     currency = state.currency,
+                    maxLines = 1,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -306,6 +330,7 @@ private fun MonthHeaderCard(state: DashboardUiState) {
                     value = state.monthNet,
                     color = if (state.monthNet >= 0) PayColors.income else PayColors.expense,
                     currency = state.currency,
+                    maxLines = 1,
                 )
             }
         }
@@ -348,6 +373,8 @@ private fun CategoryBalanceCard(
                 Text(
                     text = balance.category.name,
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = if (balance.category.type == com.paysplit.app.data.model.CategoryType.SAVINGS) {
@@ -359,6 +386,8 @@ private fun CategoryBalanceCard(
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             StatusDot(status = balance.status)
@@ -377,12 +406,15 @@ private fun CategoryBalanceCard(
                     " из ${Formatters.money(balance.category.monthlyPlan, currency)}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 text = "Осталось ${Formatters.money(balance.remainingToPlan, currency)}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
             )
         }
 
@@ -396,14 +428,8 @@ private fun CategoryBalanceCard(
                 color = if (balance.balance < 0) PayColors.expense else PayColors.income,
                 style = MaterialTheme.typography.titleLarge,
                 currency = currency,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = "Трат за месяц: ${balance.spentThisMonth.let {
-                    Formatters.money(it, currency)
-                }}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
             )
             Button(
                 onClick = onEdit,
@@ -412,7 +438,7 @@ private fun CategoryBalanceCard(
                     horizontal = 8.dp,
                     vertical = 0.dp,
                 ),
-            ) { Text("✏️ План") }
+            ) { Text("✏️ План", maxLines = 1) }
             Button(
                 onClick = click,
                 colors = ButtonDefaults.textButtonColors(),
@@ -420,8 +446,17 @@ private fun CategoryBalanceCard(
                     horizontal = 8.dp,
                     vertical = 0.dp,
                 ),
-            ) { Text("Открыть") }
+            ) { Text("Открыть", maxLines = 1) }
         }
+        Text(
+            text = "Трат за месяц: ${balance.spentThisMonth.let {
+                Formatters.money(it, currency)
+            }}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
 
         if (balance.isOverspend) {
             Spacer(Modifier.height(6.dp))
@@ -451,11 +486,15 @@ private fun RecentTransactionRow(transaction: UiTransaction, currency: String) {
             Text(
                 text = transaction.title,
                 style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = "${transaction.categoryName} · ${DateUtils.formatShortDate(transaction.date)}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         Text(
