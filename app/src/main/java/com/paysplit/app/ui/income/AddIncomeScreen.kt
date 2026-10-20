@@ -176,7 +176,7 @@ fun AddIncomeScreen(
                     Spacer(Modifier.height(3.dp))
                     Text(
                         text = if (state.manualMode) "Ручная правка — меняете одну, остальные пересчитаются"
-                        else "Снимите ☑ у лишнего счёта (Авто уже пополнен) — деньги уйдут остальным",
+                        else "Снимите ☑ у лишнего — деньги уйдут остальным. «Уже» = получено в этом месяце (баланс — в Счетах)",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
@@ -299,7 +299,7 @@ private fun DistributionTable(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = allocation.categoryName,
-                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
@@ -313,24 +313,24 @@ private fun DistributionTable(
                     }
                     Spacer(Modifier.height(6.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        // План
+                        // План — чуть больше, но всё ещё меньше названия (13sp)
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("План", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text("План", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             Spacer(Modifier.height(1.dp))
-                            Text(Formatters.money(allocation.plan, ""), style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp), maxLines = 1, softWrap = false, overflow = TextOverflow.Visible, textAlign = TextAlign.Center)
+                            Text(Formatters.money(allocation.plan, ""), style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp), maxLines = 1, softWrap = false, overflow = TextOverflow.Visible, textAlign = TextAlign.Center)
                         }
                         // Уже
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Уже", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text("Уже", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             Spacer(Modifier.height(1.dp))
-                            Text(Formatters.money(allocation.alreadyAllocated, ""), style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false, overflow = TextOverflow.Visible, textAlign = TextAlign.Center)
+                            Text(Formatters.money(allocation.alreadyAllocated, ""), style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false, overflow = TextOverflow.Visible, textAlign = TextAlign.Center)
                         }
                         // Сейчас
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Сейчас", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text("Сейчас", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             Spacer(Modifier.height(1.dp))
                             if (isExcluded) {
-                                Text("—", style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                                Text("—", style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                             } else if (state.manualMode) {
                                 val current = manualInputs.getOrPut(allocation.categoryId) { formatInput(allocation.amount) }
                                 OutlinedTextField(
@@ -343,11 +343,11 @@ private fun DistributionTable(
                                     },
                                     modifier = Modifier.width(72.dp),
                                     singleLine = true,
-                                    textStyle = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp, textAlign = TextAlign.Center),
+                                    textStyle = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, textAlign = TextAlign.Center),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                                 )
                             } else {
-                                Text(Formatters.money(allocation.amount, ""), style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = PayColors.income, textAlign = TextAlign.Center, maxLines = 1, softWrap = false, overflow = TextOverflow.Visible)
+                                Text(Formatters.money(allocation.amount, ""), style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = PayColors.income, textAlign = TextAlign.Center, maxLines = 1, softWrap = false, overflow = TextOverflow.Visible)
                             }
                         }
                     }

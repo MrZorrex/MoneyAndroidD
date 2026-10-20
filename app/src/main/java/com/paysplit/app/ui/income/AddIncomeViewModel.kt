@@ -110,11 +110,18 @@ class AddIncomeViewModel(
         val allActive = data.categories.filter { it.isActive }.sortedBy { it.sortOrder }
 
         // Собираем список для UI: включённые — из result, исключённые — с 0
+        // уже_распределено считаем как в BalanceCalculator: распределения + входящие переводы + положительные коррекции
+        val monthStart = DateUtils.monthStart(f.date)
+        val monthEnd = DateUtils.monthEnd(f.date)
+        fun allocatedFor(catId: Long): Double {
+            val d = data.distributions.filter { it.categoryId == catId && it.date in monthStart..monthEnd && it.incomeId != incomeId }.sumOf { it.amount }
+            val tIn = data.transfers.filter { it.toCategoryId == catId && it.date in monthStart..monthEnd }.sumOf { it.amount }
+            val adjPos = data.adjustments.filter { it.categoryId == catId && it.date in monthStart..monthEnd && it.amount > 0 }.sumOf { it.amount }
+            return d + tIn + adjPos
+        }
         val uiAllocations = allActive.map { cat ->
             if (cat.id in f.excludedIds) {
-                val allocated = data.distributions
-                    .filter { it.categoryId == cat.id && it.date in DateUtils.monthStart(f.date)..DateUtils.monthEnd(f.date) && it.incomeId != incomeId }
-                    .sumOf { it.amount }
+                val allocated = allocatedFor(cat.id)
                 DistributionCalculator.Allocation(
                     categoryId = cat.id,
                     categoryName = cat.name,
@@ -126,9 +133,7 @@ class AddIncomeViewModel(
                 )
             } else {
                 includedMap[cat.id] ?: run {
-                    val allocated = data.distributions
-                        .filter { it.categoryId == cat.id && it.date in DateUtils.monthStart(f.date)..DateUtils.monthEnd(f.date) && it.incomeId != incomeId }
-                        .sumOf { it.amount }
+                    val allocated = allocatedFor(cat.id)
                     DistributionCalculator.Allocation(
                         categoryId = cat.id,
                         categoryName = cat.name,
@@ -189,13 +194,10 @@ class AddIncomeViewModel(
             .filter { it.isActive && it.id !in f.excludedIds }
             .sortedBy { it.sortOrder }
             .map { category: CategoryEntity ->
-                val allocated = data.distributions
-                    .filter {
-                        it.categoryId == category.id &&
-                            it.date in monthStart..monthEnd &&
-                            it.incomeId != incomeId
-                    }
-                    .sumOf { it.amount }
+                val d = data.distributions.filter { it.categoryId == category.id && it.date in monthStart..monthEnd && it.incomeId != incomeId }.sumOf { it.amount }
+                val tIn = data.transfers.filter { it.toCategoryId == category.id && it.date in monthStart..monthEnd }.sumOf { it.amount }
+                val adjPos = data.adjustments.filter { it.categoryId == category.id && it.date in monthStart..monthEnd && it.amount > 0 }.sumOf { it.amount }
+                val allocated = d + tIn + adjPos
                 DistributionCalculator.CategoryInput(
                     id = category.id,
                     name = category.name,
