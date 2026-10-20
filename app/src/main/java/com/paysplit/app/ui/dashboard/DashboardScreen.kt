@@ -411,12 +411,12 @@ private fun CompactTransactionRow(transaction: UiTransaction, currency: String) 
 private fun FreeFundsCard(amount: Double, currency: String, onDistribute: () -> Unit) {
     PayCard(containerColor = MaterialTheme.colorScheme.secondaryContainer) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(\"💵\", style = MaterialTheme.typography.titleSmall)
+            Text("💵", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(\"Свободные средства\", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Свободные средства", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    \"${Formatters.money(amount, currency)} сверх плана — распределите по счетам\",
+                    "${Formatters.money(amount, currency)} сверх плана — распределите по счетам",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -428,29 +428,29 @@ private fun FreeFundsCard(amount: Double, currency: String, onDistribute: () -> 
             onClick = hapticClick(onDistribute),
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-        ) { Text(\"Распределить по счетам\", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
+        ) { Text("Распределить по счетам", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
     }
 }
 
 @Composable
 private fun DistributeFreeFundsDialog(state: DashboardUiState, viewModel: DashboardViewModel, onDismiss: () -> Unit) {
     val free = state.freeAmount
-    val accounts = state.balances.filter { it.category.isActive }.filterNot { it.category.name.contains(\"Свобод\") }
-    var amounts by remember { mutableStateOf(accounts.associate { it.category.id to \"\" }.toMutableMap()) }
+    val accounts = state.balances.filter { it.category.isActive }.filterNot { it.category.name.contains("Свобод") }
+    var amounts by remember { mutableStateOf(accounts.associate { it.category.id to "" }.toMutableMap()) }
     val sumAllocated = amounts.values.sumOf { com.paysplit.app.ui.components.parseMoney(it) ?: 0.0 }
     val remaining = free - sumAllocated
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(\"Распределить ${Formatters.money(free, state.currency)}\", style = MaterialTheme.typography.titleSmall) },
+        title = { Text("Распределить ${Formatters.money(free, state.currency)}", style = MaterialTheme.typography.titleSmall) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(\"Свободные средства сверх ожидаемого дохода — распределите между счетами\", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(\"Осталось распределить: ${Formatters.money(remaining.coerceAtLeast(0.0), state.currency)}\", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (remaining < -0.01) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                Text("Свободные средства сверх ожидаемого дохода — распределите между счетами", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Осталось распределить: ${Formatters.money(remaining.coerceAtLeast(0.0), state.currency)}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (remaining < -0.01) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(4.dp))
                 Column(modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (accounts.isEmpty()) {
-                        Text(\"Нет счетов\", style = MaterialTheme.typography.labelSmall)
+                        Text("Нет счетов", style = MaterialTheme.typography.labelSmall)
                     } else {
                         accounts.forEach { b ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -459,9 +459,9 @@ private fun DistributeFreeFundsDialog(state: DashboardUiState, viewModel: Dashbo
                                 Text(b.category.name, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             com.paysplit.app.ui.components.MoneyInputField(
-                                value = amounts[b.category.id] ?: \"\",
+                                value = amounts[b.category.id] ?: "",
                                 onValueChange = { v -> amounts = amounts.toMutableMap().also { it[b.category.id] = v } },
-                                label = \"Сумма → ${b.category.name}\",
+                                label = "Сумма → ${b.category.name}",
                             )
                         }
                     }
@@ -474,7 +474,7 @@ private fun DistributeFreeFundsDialog(state: DashboardUiState, viewModel: Dashbo
                         amounts = accounts.associate { it.category.id to equal.toLong().toString() }.toMutableMap()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text(\"Поровну между всеми\", style = MaterialTheme.typography.labelMedium) }
+                ) { Text("Поровну между всеми", style = MaterialTheme.typography.labelMedium) }
             }
         },
         confirmButton = {
@@ -487,9 +487,9 @@ private fun DistributeFreeFundsDialog(state: DashboardUiState, viewModel: Dashbo
                     viewModel.distributeFreeFunds(allocations)
                     onDismiss()
                 }
-            }, enabled = sumAllocated in 0.01..(free + 0.01)) { Text(\"Перевести\", style = MaterialTheme.typography.labelMedium) }
+            }, enabled = sumAllocated in 0.01..(free + 0.01)) { Text("Перевести", style = MaterialTheme.typography.labelMedium) }
         },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text(\"Отмена\", style = MaterialTheme.typography.labelMedium) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Отмена", style = MaterialTheme.typography.labelMedium) } },
     )
 }
 
