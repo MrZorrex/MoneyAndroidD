@@ -302,13 +302,27 @@ class AddIncomeViewModel(
 
             val auto = calculateResult(data, f, amount).allocations
             // Собираем финальные аллокации: для включённых — из auto/manual, для исключённых — 0
-            val finalAllocations: List<Pair<Long, Double>> = if (f.manual != null) {
+            var finalAllocations: List<Pair<Long, Double>> = if (f.manual != null) {
                 // manual уже содержит 0 для исключённых
                 f.manual.map { (id, v) -> id to v }
             } else {
                 val includedPairs = auto.map { it.categoryId to it.amount }
                 val excludedPairs = f.excludedIds.map { it to 0.0 }
                 includedPairs + excludedPairs
+            }
+
+            // Излишек (доход > планов) — записываем на «Свободные средства» чтобы он показывался в балансе и был доступен для перевода
+            val allocatedSum = finalAllocations.sumOf { it.second }
+            val surplus = amount - allocatedSum
+            if (surplus > 0.5) {
+                val freeFunds = repository.ensureFreeFundsCategory()
+                // если уже есть аллокация на свободные — суммируем, иначе добавляем
+                val existingFree = finalAllocations.firstOrNull { it.first == freeFunds.id }
+                finalAllocations = if (existingFree != null) {
+                    finalAllocations.map { if (it.first == freeFunds.id) it.first to (it.second + surplus) else it }
+                } else {
+                    finalAllocations + (freeFunds.id to surplus)
+                }
             }
 
             if (incomeId != 0L) {

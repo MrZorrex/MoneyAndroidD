@@ -158,6 +158,25 @@ class PaySplitRepository(private val db: AppDatabase) {
             category.id
         }
 
+    /** Гарантирует наличие категории «Свободные средства» для хранения излишков. */
+    suspend fun ensureFreeFundsCategory(): CategoryEntity {
+        val all = categoryDao.getAll()
+        all.firstOrNull { it.name == "Свободные средства" || it.name == "Свободные" }?.let { return it }
+        // fallback по иконке 💵 + план 0 + накопительный
+        all.firstOrNull { it.icon == "💵" && it.monthlyPlan == 0.0 && it.type == com.paysplit.app.data.model.CategoryType.SAVINGS }?.let { return it }
+        val nextOrder = (all.maxOfOrNull { it.sortOrder } ?: -1) + 1
+        val entity = CategoryEntity(
+            name = "Свободные средства",
+            icon = "💵",
+            monthlyPlan = 0.0,
+            type = com.paysplit.app.data.model.CategoryType.SAVINGS,
+            isActive = true,
+            sortOrder = nextOrder,
+        )
+        val id = categoryDao.insert(entity)
+        return entity.copy(id = id)
+    }
+
     suspend fun deleteCategory(id: Long) {
         categoryDao.getById(id)?.let { categoryDao.delete(it) }
     }

@@ -26,6 +26,7 @@ object DefaultCategories {
         Template("🏥", "Здоровье", 5000.0, CategoryType.SAVINGS),
         Template("🎉", "Безболезненные траты", 5000.0, CategoryType.INSTANT_PAY),
         Template("🔄", "Резерв", 1577.0, CategoryType.SAVINGS),
+        Template("💵", "Свободные средства", 0.0, CategoryType.SAVINGS),
     )
 
     /** Готовые категории для вставки в базу. */

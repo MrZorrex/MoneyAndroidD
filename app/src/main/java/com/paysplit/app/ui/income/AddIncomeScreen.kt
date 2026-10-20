@@ -197,7 +197,7 @@ fun AddIncomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                text = "💵 Свободно: ${Formatters.money(state.surplus, state.currency)} — планы закрыты",
+                                text = "💵 Свободно: ${Formatters.money(state.surplus, state.currency)} → в «Свободные средства», можно перевести",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -210,7 +210,7 @@ fun AddIncomeScreen(
                     if (state.undistributed > 0.5 && state.manualMode) {
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "Нераспределено: ${Formatters.money(state.undistributed, state.currency)}",
+                            "Нераспределено: ${Formatters.money(state.undistributed, state.currency)} → в «Свободные средства»",
                             style = MaterialTheme.typography.labelSmall,
                             color = PayColors.warning,
                             maxLines = 1,

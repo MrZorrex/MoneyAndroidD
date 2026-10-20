@@ -41,8 +41,8 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
-                .fallbackToDestructiveMigrationOnDowngrade()
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
 }

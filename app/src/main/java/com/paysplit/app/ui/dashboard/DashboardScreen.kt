@@ -76,6 +76,7 @@ fun DashboardScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showTransfer by remember { mutableStateOf(false) }
+    var editingCategoryId by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -140,6 +141,7 @@ fun DashboardScreen(
                         balances = state.balances,
                         currency = state.currency,
                         onCategoryClick = onCategoryClick,
+                        onEditCategory = { editingCategoryId = it },
                     )
                 }
             }
@@ -192,6 +194,20 @@ fun DashboardScreen(
 
     if (showTransfer) {
         TransferDialog(viewModel = viewModel, onDismiss = { showTransfer = false })
+    }
+
+    val editingCategory = editingCategoryId?.let { id -> state.balances.firstOrNull { it.category.id == id }?.category }
+    if (editingCategory != null) {
+        com.paysplit.app.ui.components.CategorySettingsDialog(
+            category = editingCategory,
+            currency = state.currency,
+            onDismiss = { editingCategoryId = null },
+            onSave = { updated ->
+                viewModel.saveCategory(updated)
+                editingCategoryId = null
+            },
+            currentBalance = state.balances.firstOrNull { it.category.id == editingCategory.id }?.allTimeBalance ?: 0.0,
+        )
     }
 }
 
@@ -301,6 +317,7 @@ private fun AccountsPreviewRow(
     balances: List<BalanceCalculator.CategoryBalance>,
     currency: String,
     onCategoryClick: (Long) -> Unit,
+    onEditCategory: (Long) -> Unit,
 ) {
     // Вертикальный список счетов вместо горизонтальной прокрутки
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -332,7 +349,10 @@ private fun AccountsPreviewRow(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(4.dp))
+                    TextButton(onClick = { onEditCategory(b.category.id) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
+                        Text("✏️", style = MaterialTheme.typography.labelMedium)
+                    }
                     Text("›", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
