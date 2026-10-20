@@ -10,11 +10,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
@@ -141,12 +144,12 @@ fun DashboardScreen(
                 }
             }
 
-            // История трат — компактная, группировка по дням, больше элементов
+            // История — все приходы, уходы и изменения
             if (state.recentTransactions.isNotEmpty()) {
                 item {
                     SectionHeader(
-                        title = "История трат",
-                        subtitle = "Последние ${state.recentTransactions.size} за месяц",
+                        title = "История",
+                        subtitle = "Все приходы, уходы и изменения · ${state.recentTransactions.size} за месяц",
                         trailing = {
                             if (state.recentTransactions.size >= 10) {
                                 Text(
@@ -176,9 +179,9 @@ fun DashboardScreen(
             } else {
                 item {
                     PayCard {
-                        Text("Трат пока нет", style = MaterialTheme.typography.titleSmall)
+                        Text("История пуста", style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(2.dp))
-                        Text("Нажмите «➕ Траты» чтобы добавить расход", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Нажмите «Пришла зарплата», «➕ Траты» или сделайте коррекцию — всё появится здесь", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -299,32 +302,38 @@ private fun AccountsPreviewRow(
     currency: String,
     onCategoryClick: (Long) -> Unit,
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(balances, key = { it.category.id }) { b ->
+    // Вертикальный список счетов вместо горизонтальной прокрутки
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        balances.forEach { b ->
             androidx.compose.material3.Card(
-                modifier = Modifier.width(132.dp).clickable { onCategoryClick(b.category.id) },
+                modifier = Modifier.fillMaxWidth().clickable { onCategoryClick(b.category.id) },
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = if (b.status == com.paysplit.app.data.model.CategoryStatus.OVERSPEND) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CategoryAvatar(icon = b.category.icon, size = 24)
-                        Spacer(Modifier.width(6.dp))
-                        Text(b.category.name, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        StatusDot(status = b.status)
+                Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CategoryAvatar(icon = b.category.icon, size = 28)
+                    Spacer(Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(b.category.name, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                            Spacer(Modifier.width(4.dp))
+                            StatusDot(status = b.status)
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        Text(Formatters.money(b.balance, currency), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (b.balance < 0) PayColors.expense else PayColors.income, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.height(2.dp))
+                        AnimatedProgress(progress = b.monthProgress, color = PayColors.ofStatus(b.status), height = 4)
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "${(b.monthProgress * 100).toInt()}% · ${Formatters.money(b.remainingToPlan, currency)} ост.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
-                    Spacer(Modifier.height(6.dp))
-                    Text(Formatters.money(b.balance, currency), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (b.balance < 0) PayColors.expense else PayColors.income, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Spacer(Modifier.height(2.dp))
-                    AnimatedProgress(progress = b.monthProgress, color = PayColors.ofStatus(b.status), height = 3)
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        "${(b.monthProgress * 100).toInt()}% · ${Formatters.money(b.remainingToPlan, currency)} ост.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("›", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -363,7 +372,7 @@ private fun CompactTransactionRow(transaction: UiTransaction, currency: String) 
     }
 }
 
-/** Диалог перевода средств между счетами. */
+/** Диалог перевода средств между счетами — вертикальный выбор. */
 @Composable
 private fun TransferDialog(
     viewModel: DashboardViewModel,
@@ -380,20 +389,44 @@ private fun TransferDialog(
         title = { Text("↔️ Перевод", style = MaterialTheme.typography.titleSmall) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Списать:", style = MaterialTheme.typography.labelSmall)
-                com.paysplit.app.ui.components.ChipRow(
-                    options = accounts.map { it.category.id },
-                    selected = fromId,
-                    onSelect = { fromId = it },
-                    label = { id -> accounts.firstOrNull { it.category.id == id }?.category?.name ?: "?" },
-                )
+                Text("Списать (вертикальный список):", style = MaterialTheme.typography.labelSmall)
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    accounts.forEach { b ->
+                        val selected = b.category.id == fromId
+                        androidx.compose.material3.Surface(
+                            onClick = { fromId = b.category.id },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                CategoryAvatar(icon = b.category.icon, size = 24)
+                                Spacer(Modifier.width(8.dp))
+                                Text(b.category.name, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                                if (selected) Text("✓", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
                 Text("Зачислить:", style = MaterialTheme.typography.labelSmall)
-                com.paysplit.app.ui.components.ChipRow(
-                    options = accounts.map { it.category.id },
-                    selected = toId,
-                    onSelect = { toId = it },
-                    label = { id -> accounts.firstOrNull { it.category.id == id }?.category?.name ?: "?" },
-                )
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    accounts.forEach { b ->
+                        val selected = b.category.id == toId
+                        androidx.compose.material3.Surface(
+                            onClick = { toId = b.category.id },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                CategoryAvatar(icon = b.category.icon, size = 24)
+                                Spacer(Modifier.width(8.dp))
+                                Text(b.category.name, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                                if (selected) Text("✓", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 com.paysplit.app.ui.components.MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма, ${state.currency}")
             }

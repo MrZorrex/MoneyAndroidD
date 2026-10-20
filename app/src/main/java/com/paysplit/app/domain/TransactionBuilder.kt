@@ -108,7 +108,7 @@ object TransactionBuilder {
                         amount = kotlin.math.abs(adj.amount),
                         categoryId = adj.categoryId,
                         categoryName = category?.name ?: "Без категории",
-                        icon = category?.icon ?: "⚖️",
+                        icon = adj.sticker ?: category?.icon ?: "⚖️",
                         title = if (isPositive) "Коррекция +" else "Коррекция −",
                         comment = adj.comment,
                         sourceId = adj.id,

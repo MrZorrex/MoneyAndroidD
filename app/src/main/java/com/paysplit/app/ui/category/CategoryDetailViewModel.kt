@@ -130,7 +130,7 @@ class CategoryDetailViewModel(
     }
 
     /** Коррекция баланса с комментарием. */
-    fun adjustBalance(amount: Double, comment: String?, date: Long = System.currentTimeMillis()) {
+    fun adjustBalance(amount: Double, comment: String?, date: Long = System.currentTimeMillis(), sticker: String? = null) {
         viewModelScope.launch {
             repository.addAdjustment(
                 com.paysplit.app.data.model.BalanceAdjustmentEntity(
@@ -138,14 +138,15 @@ class CategoryDetailViewModel(
                     amount = amount,
                     date = date,
                     comment = comment,
+                    sticker = sticker?.takeIf { amount > 0 },
                 )
             )
         }
     }
 
-    fun setBalanceTo(newBalance: Double, comment: String?, currentBalance: Double, date: Long = System.currentTimeMillis()) {
+    fun setBalanceTo(newBalance: Double, comment: String?, currentBalance: Double, date: Long = System.currentTimeMillis(), sticker: String? = null) {
         val delta = newBalance - currentBalance
-        if (delta != 0.0) adjustBalance(delta, comment, date)
+        if (delta != 0.0) adjustBalance(delta, comment, date, sticker)
     }
 
     /** Быстрый расход с этого счёта. */

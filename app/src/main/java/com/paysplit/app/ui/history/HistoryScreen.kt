@@ -53,7 +53,7 @@ fun HistoryScreen(
     var transactionToDelete by remember { mutableStateOf<UiTransaction?>(null) }
 
     Scaffold(
-        topBar = { PayTopBar(title = "История операций", subtitle = "Все доходы и расходы") },
+        topBar = { PayTopBar(title = "История", subtitle = "Все приходы, уходы и изменения") },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -233,6 +233,7 @@ private fun TypeFilterRow(selected: TxFilter, onSelect: (TxFilter) -> Unit) {
         TxFilter.INCOME to "Доходы",
         TxFilter.EXPENSE to "Расходы",
         TxFilter.TRANSFERS to "Переводы",
+        TxFilter.ADJUSTMENT to "Коррекции",
     )
     androidx.compose.foundation.lazy.LazyRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),

@@ -10,9 +10,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -33,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -231,8 +237,8 @@ fun CategoryDetailScreen(
             icon = state.categoryIcon,
             currency = state.currency,
             onDismiss = { showAdjustDialog = false },
-            onConfirmDelta = { delta, comment, date -> viewModel.adjustBalance(delta, comment, date); showAdjustDialog = false },
-            onConfirmNewBalance = { newBalance, comment, date -> viewModel.setBalanceTo(newBalance, comment, state.balance?.balance ?: 0.0, date); showAdjustDialog = false },
+            onConfirmDelta = { delta, comment, date, sticker -> viewModel.adjustBalance(delta, comment, date, sticker); showAdjustDialog = false },
+            onConfirmNewBalance = { newBalance, comment, date, sticker -> viewModel.setBalanceTo(newBalance, comment, state.balance?.balance ?: 0.0, date, sticker); showAdjustDialog = false },
         )
     }
     val editingCategory = state.balance?.category
@@ -320,8 +326,23 @@ private fun TopUpDialog(accounts: List<Pair<Long, String>>, currency: String, on
         title = { Text("➕ Пополнить", style = MaterialTheme.typography.titleSmall) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Списать со счёта:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                ChipRow(options = accounts.map { it.first }, selected = fromId, onSelect = { fromId = it }, label = { id -> accounts.firstOrNull { it.first == id }?.second ?: "?" })
+                Text("Списать со счёта (вертикальный список):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    accounts.forEach { (id, name) ->
+                        val selected = id == fromId
+                        androidx.compose.material3.Surface(
+                            onClick = { fromId = id },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(name, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                                if (selected) Text("✓", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
                 MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма, $currency")
             }
         },
@@ -335,6 +356,30 @@ private fun TopUpDialog(accounts: List<Pair<Long, String>>, currency: String, on
     )
 }
 
+private object DetailStickers {
+    val list = listOf("💰", "💵", "💸", "🎁", "💎", "⭐", "🎉", "🏦", "🍀", "🚀", "💪", "🔥", "🌟", "🎯", "💳", "🪙", "🧧", "💚")
+}
+
+@Composable
+private fun DetailStickerPicker(selected: String, onSelect: (String) -> Unit) {
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 44.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(max = 120.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        androidx.compose.foundation.lazy.grid.items(DetailStickers.list) { s ->
+            val isSel = s == selected
+            androidx.compose.material3.Surface(
+                onClick = { onSelect(s) },
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = if (isSel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.aspectRatio(1f),
+            ) { Box(contentAlignment = Alignment.Center) { Text(s, fontSize = 20.sp) } }
+        }
+    }
+}
+
 @Composable
 private fun BalanceCorrectDialog(
     currentBalance: Double,
@@ -342,8 +387,8 @@ private fun BalanceCorrectDialog(
     icon: String,
     currency: String,
     onDismiss: () -> Unit,
-    onConfirmDelta: (Double, String?, Long) -> Unit,
-    onConfirmNewBalance: (Double, String?, Long) -> Unit,
+    onConfirmDelta: (Double, String?, Long, String?) -> Unit,
+    onConfirmNewBalance: (Double, String?, Long, String?) -> Unit,
 ) {
     var mode by remember { mutableStateOf(0) }
     var amountText by remember { mutableStateOf("") }
@@ -351,6 +396,7 @@ private fun BalanceCorrectDialog(
     var newBalanceText by remember { mutableStateOf("") }
     var commentText by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sticker by remember { mutableStateOf(DetailStickers.list.first()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -382,6 +428,11 @@ private fun BalanceCorrectDialog(
                         FilterChip(selected = !isIncrease, onClick = { isIncrease = false }, label = { Text("− Списать", style = MaterialTheme.typography.labelSmall) })
                     }
                     MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма коррекции, $currency")
+                    if (isIncrease) {
+                        Spacer(Modifier.height(4.dp))
+                        Text("Стикер пополнения:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        DetailStickerPicker(selected = sticker, onSelect = { sticker = it })
+                    }
                     val parsed = com.paysplit.app.ui.components.parseMoney(amountText)
                     if (parsed != null && parsed > 0) {
                         val preview = if (isIncrease) currentBalance + parsed else currentBalance - parsed
@@ -395,6 +446,11 @@ private fun BalanceCorrectDialog(
                     val parsed = com.paysplit.app.ui.components.parseMoney(newBalanceText)
                     if (parsed != null) {
                         val delta = parsed - currentBalance
+                        if (delta > 0) {
+                            Spacer(Modifier.height(4.dp))
+                            Text("Стикер пополнения:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            DetailStickerPicker(selected = sticker, onSelect = { sticker = it })
+                        }
                         androidx.compose.material3.Surface(color = if (delta >= 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) {
                             Column(Modifier.padding(8.dp)) {
                                 Text("Было ${Formatters.money(currentBalance, currency)} → станет ${Formatters.money(parsed, currency)}", style = MaterialTheme.typography.labelSmall)
@@ -421,10 +477,10 @@ private fun BalanceCorrectDialog(
             Button(onClick = {
                 if (mode == 0) {
                     val a = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
-                    if (a > 0) onConfirmDelta(if (isIncrease) a else -a, commentText, date)
+                    if (a > 0) onConfirmDelta(if (isIncrease) a else -a, commentText, date, if (isIncrease) sticker else null)
                 } else {
                     val nb = com.paysplit.app.ui.components.parseMoney(newBalanceText)
-                    if (nb != null) onConfirmNewBalance(nb, commentText, date)
+                    if (nb != null) onConfirmNewBalance(nb, commentText, date, if ((nb - currentBalance) > 0) sticker else null)
                 }
             }, enabled = canSave) { Text("Сохранить", style = MaterialTheme.typography.labelMedium) }
         },

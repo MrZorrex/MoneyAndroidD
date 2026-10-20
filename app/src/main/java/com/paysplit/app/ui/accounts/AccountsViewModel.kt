@@ -175,7 +175,7 @@ class AccountsViewModel(private val repository: PaySplitRepository) : ViewModel(
 
     fun dismissBalanceAdjust() = adjustState.update { it.copy(visible = false) }
 
-    fun confirmBalanceAdjust(amount: Double, comment: String?, date: Long = System.currentTimeMillis()) {
+    fun confirmBalanceAdjust(amount: Double, comment: String?, date: Long = System.currentTimeMillis(), sticker: String? = null) {
         val cur = adjustState.value
         if (cur.categoryId == 0L || amount == 0.0) return
         viewModelScope.launch {
@@ -185,20 +185,37 @@ class AccountsViewModel(private val repository: PaySplitRepository) : ViewModel(
                     amount = amount,
                     date = date,
                     comment = comment?.trim()?.takeIf { it.isNotBlank() },
+                    sticker = sticker?.takeIf { amount > 0 },
                 )
             )
             adjustState.update { it.copy(visible = false) }
         }
     }
 
-    fun setBalanceTo(amount: Double, comment: String?, date: Long = System.currentTimeMillis()) {
+    fun setBalanceTo(amount: Double, comment: String?, date: Long = System.currentTimeMillis(), sticker: String? = null) {
         val cur = adjustState.value
         val delta = amount - cur.currentBalance
         if (delta == 0.0) {
             dismissBalanceAdjust()
             return
         }
-        confirmBalanceAdjust(delta, comment, date)
+        confirmBalanceAdjust(delta, comment, date, sticker)
+    }
+
+    /** Пополнение счёта из свободных средств — положительная коррекция. */
+    fun topUpFromFreeFunds(targetCategoryId: Long, amount: Double, sticker: String?, comment: String?, date: Long = System.currentTimeMillis()) {
+        val catName = state.value.items.firstOrNull { it.category.id == targetCategoryId }?.category?.name ?: "Счёт"
+        viewModelScope.launch {
+            repository.addAdjustment(
+                BalanceAdjustmentEntity(
+                    categoryId = targetCategoryId,
+                    amount = amount,
+                    date = date,
+                    comment = (comment?.trim()?.takeIf { it.isNotBlank() } ?: "Пополнение из свободных средств"),
+                    sticker = sticker,
+                )
+            )
+        }
     }
 
     // --- Список ---

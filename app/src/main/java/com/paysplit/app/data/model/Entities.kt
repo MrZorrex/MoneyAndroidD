@@ -158,6 +158,8 @@ data class BalanceAdjustmentEntity(
     val date: Long,
     /** Комментарий пользователя к корректировке. */
     val comment: String? = null,
+    /** Стикер для пополнений (эмодзи). */
+    val sticker: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
 )
 
