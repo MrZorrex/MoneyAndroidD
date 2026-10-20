@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -138,7 +137,7 @@ private fun MainScaffold() {
 
     val items = listOf(
         BottomItem(Routes.DASHBOARD, "Главная", Icons.Filled.Home),
-        BottomItem(Routes.ACCOUNTS, "Счета", Icons.Filled.AccountBalanceWallet),
+        BottomItem(Routes.ACCOUNTS, "Счета", R.drawable.ic_wallet),
         BottomItem(Routes.HISTORY, "История", Icons.Filled.DateRange),
         BottomItem(Routes.ANALYTICS, "Аналитика", R.drawable.ic_chart),
         BottomItem(Routes.SETTINGS, "Настройки", Icons.Filled.Settings),
