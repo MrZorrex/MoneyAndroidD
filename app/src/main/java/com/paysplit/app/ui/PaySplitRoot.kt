@@ -255,7 +255,10 @@ private fun MainScaffold() {
             }
 
             composable(Routes.HISTORY) {
-                HistoryScreen()
+                HistoryScreen(
+                    onEditIncome = { id -> navController.navigate(Routes.editIncome(id)) },
+                    onEditExpense = { id -> navController.navigate(Routes.editExpense(id)) },
+                )
             }
 
             composable(Routes.ANALYTICS) { AnalyticsScreen() }

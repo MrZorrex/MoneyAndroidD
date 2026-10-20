@@ -118,6 +118,14 @@ class HistoryViewModel(private val repository: PaySplitRepository) : ViewModel()
         }
     }
 
+    fun updateTransfer(transfer: com.paysplit.app.data.model.TransferEntity) {
+        viewModelScope.launch { repository.updateTransfer(transfer) }
+    }
+
+    fun updateAdjustment(adjustment: com.paysplit.app.data.model.BalanceAdjustmentEntity) {
+        viewModelScope.launch { repository.updateAdjustment(adjustment) }
+    }
+
     private fun rangeFor(f: HistoryFilters): Pair<Long, Long> {
         val now = System.currentTimeMillis()
         return when (f.period) {

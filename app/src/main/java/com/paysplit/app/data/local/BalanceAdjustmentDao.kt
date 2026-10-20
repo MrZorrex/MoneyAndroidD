@@ -3,6 +3,7 @@ package com.paysplit.app.data.local
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.paysplit.app.data.model.BalanceAdjustmentEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -23,6 +24,9 @@ interface BalanceAdjustmentDao {
 
     @Insert
     suspend fun insert(entity: BalanceAdjustmentEntity): Long
+
+    @Update
+    suspend fun update(entity: BalanceAdjustmentEntity)
 
     @Query("DELETE FROM balance_adjustments WHERE id = :id")
     suspend fun deleteById(id: Long)

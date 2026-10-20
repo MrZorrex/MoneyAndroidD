@@ -31,6 +31,7 @@ data class DashboardUiState(
     val expenseByCategory: List<AnalyticsEngine.CategoryExpense> = emptyList(),
     val recentTransactions: List<UiTransaction> = emptyList(),
     val currency: String = "₽",
+    val freeAmount: Double = 0.0,
 ) {
     /** Прогресс получения зарплаты за месяц (0..1). */
     val incomeProgress: Float
@@ -52,11 +53,15 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
 
         val stats = AnalyticsEngine.compute(data, monthStart, monthEnd)
 
+        val expected = data.settings.expectedMonthlyIncome
+        val received = BalanceCalculator.incomeThisMonth(data, monthStart, monthEnd)
+        val free = if (expected > 0) max(0.0, received - expected) else max(0.0, received - data.totalMonthlyPlan)
+
         DashboardUiState(
             loading = false,
             monthLabel = DateUtils.formatMonth(DateUtils.yearMonth(now)),
-            expectedIncome = data.settings.expectedMonthlyIncome,
-            receivedThisMonth = BalanceCalculator.incomeThisMonth(data, monthStart, monthEnd),
+            expectedIncome = expected,
+            receivedThisMonth = received,
             incomeCount = BalanceCalculator.incomeCountThisMonth(data, monthStart, monthEnd),
             paydayCount = data.settings.paydayCount,
             totalBalance = BalanceCalculator.totalBalance(data),
@@ -66,6 +71,7 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
             expenseByCategory = stats.byCategory,
             recentTransactions = TransactionBuilder.build(data, monthStart, monthEnd).take(12),
             currency = data.settings.currency,
+            freeAmount = free,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
 
@@ -100,6 +106,27 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
                     comment = "Перевод между счетами",
                 ),
             )
+        }
+    }
+
+    /** Распределение свободных средств по счетам — переводы из 💵 Свободные средства. */
+    fun distributeFreeFunds(allocations: List<Pair<Long, Double>>) {
+        viewModelScope.launch {
+            val freeFunds = repository.ensureFreeFundsCategory()
+            val now = System.currentTimeMillis()
+            allocations.forEach { (catId, amount) ->
+                if (amount > 0.5 && catId != freeFunds.id) {
+                    repository.addTransfer(
+                        com.paysplit.app.data.model.TransferEntity(
+                            fromCategoryId = freeFunds.id,
+                            toCategoryId = catId,
+                            amount = amount,
+                            date = now,
+                            comment = "Распределение свободных средств",
+                        )
+                    )
+                }
+            }
         }
     }
 }

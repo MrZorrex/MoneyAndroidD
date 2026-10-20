@@ -130,6 +130,8 @@ class PaySplitRepository(private val db: AppDatabase) {
     /** Перевод между счетами: расход с одного + доход на другой. */
     suspend fun addTransfer(transfer: TransferEntity): Long = transferDao.insert(transfer)
 
+    suspend fun updateTransfer(transfer: TransferEntity) = transferDao.update(transfer)
+
     suspend fun deleteTransfer(id: Long) {
         transferDao.deleteById(id)
     }
@@ -140,6 +142,8 @@ class PaySplitRepository(private val db: AppDatabase) {
 
     suspend fun addAdjustment(adjustment: BalanceAdjustmentEntity): Long =
         adjustmentDao.insert(adjustment)
+
+    suspend fun updateAdjustment(adjustment: BalanceAdjustmentEntity) = adjustmentDao.update(adjustment)
 
     suspend fun deleteAdjustment(id: Long) {
         adjustmentDao.deleteById(id)
