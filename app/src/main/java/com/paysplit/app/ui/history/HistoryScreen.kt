@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -545,13 +549,13 @@ private fun AdjustmentEditDialog(
                 MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма, $currency")
                 if (isIncrease) {
                     Text("Стикер:", style = MaterialTheme.typography.labelSmall)
-                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(44.dp),
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(44.dp),
                         modifier = Modifier.fillMaxWidth().heightIn(max = 100.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        androidx.compose.foundation.lazy.grid.items(listOf("💰","💵","💸","🎁","💎","⭐","🎉","🏦","🍀","🚀","💪","🔥","🌟","🎯","💳","🪙")) { s ->
+                        gridItems(listOf("💰","💵","💸","🎁","💎","⭐","🎉","🏦","🍀","🚀","💪","🔥","🌟","🎯","💳","🪙")) { s ->
                             val sel = s == sticker
                             androidx.compose.material3.Surface(onClick = { sticker = s }, shape = androidx.compose.foundation.shape.CircleShape, color = if (sel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.aspectRatio(1f)) {
                                 Box(contentAlignment = Alignment.Center) { Text(s, fontSize = 18.sp) }
