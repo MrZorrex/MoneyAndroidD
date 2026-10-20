@@ -1,5 +1,6 @@
 package com.paysplit.app.ui.income
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -300,88 +302,98 @@ private fun DistributionTable(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 3.dp)
+                    .padding(vertical = 2.dp)
                     .alpha(if (isExcluded) 0.45f else 1f),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Checkbox(
-                    checked = !isExcluded,
-                    onCheckedChange = { viewModel.toggleCategory(allocation.categoryId) },
-                    modifier = Modifier.size(16.dp).scale(0.85f),
-                    colors = CheckboxDefaults.colors(uncheckedColor = MaterialTheme.colorScheme.outline)
-                )
-                Spacer(Modifier.width(4.dp))
-                CategoryAvatar(icon = allocation.icon, size = 20)
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = allocation.categoryName,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 13.sp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(end = 4.dp),
-                )
-                // План
-                Text(
-                    Formatters.money(allocation.plan, ""),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    textAlign = TextAlign.End,
-                    maxLines = 1,
-                    overflow = TextOverflow.Visible,
-                    softWrap = false,
-                    modifier = Modifier.width(TablePlanWidth).padding(horizontal = 1.dp),
-                )
-                // Уже
-                Text(
-                    Formatters.money(allocation.alreadyAllocated, ""),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.End,
-                    maxLines = 1,
-                    overflow = TextOverflow.Visible,
-                    softWrap = false,
-                    modifier = Modifier.width(TableAlreadyWidth).padding(horizontal = 1.dp),
-                )
-                // Сейчас
-                if (isExcluded) {
+                // Кликабельная область строки (чекбокс + данные) — отдельный Row с toggle
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 2.dp)
+                        .clickable { viewModel.toggleCategory(allocation.categoryId) },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = !isExcluded,
+                        onCheckedChange = { viewModel.toggleCategory(allocation.categoryId) },
+                        modifier = Modifier.size(16.dp).scale(0.85f),
+                        colors = CheckboxDefaults.colors(uncheckedColor = MaterialTheme.colorScheme.outline)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    CategoryAvatar(icon = allocation.icon, size = 20)
+                    Spacer(Modifier.width(6.dp))
                     Text(
-                        "—",
+                        text = allocation.categoryName,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 13.sp),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        softWrap = true,
+                        modifier = Modifier.weight(1f, fill = true).padding(end = 4.dp),
+                    )
+                    // План — авто-ширина по содержимому, минимум
+                    Text(
+                        Formatters.money(allocation.plan, ""),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        textAlign = TextAlign.End,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Visible,
+                        modifier = Modifier.widthIn(min = TablePlanWidth).padding(horizontal = 1.dp),
+                    )
+                    // Уже
+                    Text(
+                        Formatters.money(allocation.alreadyAllocated, ""),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.End,
                         maxLines = 1,
-                        modifier = Modifier.width(TableNowWidth).padding(horizontal = 1.dp),
-                    )
-                } else if (state.manualMode) {
-                    val current = manualInputs.getOrPut(allocation.categoryId) { formatInput(allocation.amount) }
-                    OutlinedTextField(
-                        value = current,
-                        onValueChange = { input ->
-                            val filtered = input.filter { it.isDigit() }
-                            manualInputs[allocation.categoryId] = filtered
-                            com.paysplit.app.ui.components.parseMoney(filtered)?.let { value ->
-                                viewModel.setManualAmount(allocation.categoryId, value)
-                            } ?: run {
-                                if (filtered.isEmpty()) viewModel.setManualAmount(allocation.categoryId, 0.0)
-                            }
-                        },
-                        modifier = Modifier.width(TableNowWidth).padding(start = 1.dp),
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, textAlign = TextAlign.End),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                    )
-                } else {
-                    Text(
-                        Formatters.money(allocation.amount, ""),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                        color = PayColors.income,
-                        textAlign = TextAlign.End,
-                        maxLines = 1,
-                        overflow = TextOverflow.Visible,
                         softWrap = false,
-                        modifier = Modifier.width(TableNowWidth).padding(horizontal = 1.dp),
+                        overflow = TextOverflow.Visible,
+                        modifier = Modifier.widthIn(min = TableAlreadyWidth).padding(horizontal = 1.dp),
                     )
+                    // Сейчас
+                    if (isExcluded) {
+                        Text(
+                            "—",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.End,
+                            maxLines = 1,
+                            modifier = Modifier.widthIn(min = TableNowWidth).padding(horizontal = 1.dp),
+                        )
+                    } else if (state.manualMode) {
+                        val current = manualInputs.getOrPut(allocation.categoryId) { formatInput(allocation.amount) }
+                        OutlinedTextField(
+                            value = current,
+                            onValueChange = { input ->
+                                val filtered = input.filter { it.isDigit() }
+                                manualInputs[allocation.categoryId] = filtered
+                                com.paysplit.app.ui.components.parseMoney(filtered)?.let { value ->
+                                    viewModel.setManualAmount(allocation.categoryId, value)
+                                } ?: run {
+                                    if (filtered.isEmpty()) viewModel.setManualAmount(allocation.categoryId, 0.0)
+                                }
+                            },
+                            modifier = Modifier.width(TableNowWidth).padding(start = 1.dp),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, textAlign = TextAlign.End),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        )
+                    } else {
+                        Text(
+                            Formatters.money(allocation.amount, ""),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                            color = PayColors.income,
+                            textAlign = TextAlign.End,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Visible,
+                            modifier = Modifier.widthIn(min = TableNowWidth).padding(horizontal = 1.dp),
+                        )
+                    }
                 }
-                // Карандаш — компактнее
+                // Карандаш — вне кликабельной зоны, не триггерит toggle
                 TextButton(
                     onClick = { onEditCategory(allocation.categoryId) },
                     modifier = Modifier.width(TableEditWidth).height(18.dp),
