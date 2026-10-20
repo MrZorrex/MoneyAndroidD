@@ -35,12 +35,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.paysplit.app.util.DateUtils
 
-/** Парсит введённую сумму; null — ввод некорректен. */
+/** Парсит введённую сумму — только целое, без копеек. */
 fun parseMoney(text: String): Double? {
-    val normalized = text.trim().replace(',', '.').replace(' ', ' ')
+    val normalized = text.trim().replace(' ', ' ').replace(" ", "").replace(',', '.')
     if (normalized.isEmpty()) return null
-    val value = normalized.toDoubleOrNull() ?: return null
-    return if (value.isFinite() && value >= 0.0) value else null
+    // Отбрасываем дробную часть — работаем только с целыми
+    val intPart = normalized.substringBefore('.').trim()
+    if (intPart.isEmpty()) return null
+    val value = intPart.toLongOrNull() ?: return null
+    return if (value >= 0) value.toDouble() else null
 }
 
 /**
@@ -55,8 +58,7 @@ fun capitalizeFirst(text: String): String {
 }
 
 /**
- * Большое поле ввода суммы с цифровой клавиатурой.
- * Принимает только цифры и один разделитель (запятая или точка).
+ * Поле ввода суммы — только целые рубли, без копеек.
  */
 @Composable
 fun MoneyInputField(
@@ -71,24 +73,18 @@ fun MoneyInputField(
     OutlinedTextField(
         value = value,
         onValueChange = { input ->
-            val filtered = buildString {
-                input.forEach { ch ->
-                    when {
-                        ch.isDigit() -> append(ch)
-                        (ch == '.' || ch == ',') && none { it == '.' || it == ',' } -> append('.')
-                    }
-                }
-            }
+            // Только цифры, пробелы и тонкий NBSP как разделители тысяч для удобства ввода
+            val filtered = input.filter { it.isDigit() }
             onValueChange(filtered)
         },
         modifier = modifier.fillMaxWidth(),
         label = { Text(label) },
-        textStyle = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp),
+        textStyle = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
         singleLine = true,
         isError = isError,
         supportingText = supportingText?.let { { Text(it) } },
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Decimal,
+            keyboardType = KeyboardType.Number,
             imeAction = imeAction,
         ),
     )

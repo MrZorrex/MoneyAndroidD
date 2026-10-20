@@ -1,26 +1,20 @@
 package com.paysplit.app.domain
 
-import com.paysplit.app.util.Formatters.round2
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
- * Расчёт распределения поступления по счетам.
+ * Расчёт распределения поступления по счетам — только целые рубли.
  *
  * ЛОГИКА:
- *   остаток_категории = план_месяц − уже_распределено (не меньше 0)
- *   доля = остаток_категории / сумма_всех_остатков
- *   перевод = поступление × доля
- *
- * Если поступление больше суммы всех остатков — каждый счёт получает ровно свой
- * остаток, а разница показывается как «Свободные средства».
+ *   остаток = план − уже_распределено (≥0, округляем до целого)
+ *   доля = остаток / сумма_остатков
+ *   перевод = поступление × доля → округляем до целых с сохранением суммы
  */
 object DistributionCalculator {
 
-    /** Входные данные по одной категории. */
     data class CategoryInput(
         val id: Long,
         val name: String,
@@ -29,86 +23,64 @@ object DistributionCalculator {
         val allocatedThisMonth: Double,
     )
 
-    /** Результат расчёта по одной категории. */
     data class Allocation(
         val categoryId: Long,
         val categoryName: String,
         val icon: String,
         val plan: Double,
         val alreadyAllocated: Double,
-        /** Сколько ещё нужно распределить до плана. */
         val remainder: Double,
-        /** Сколько предлагается перевести этим поступлением. */
         val amount: Double,
     )
 
     data class Result(
         val allocations: List<Allocation>,
-        /** Свободные средства (если поступление покрыло все остатки). */
         val surplus: Double,
     ) {
         val distributedTotal: Double get() = allocations.sumOf { it.amount }
     }
 
-    /** Автоматический пропорциональный расчёт. */
     fun calculate(income: Double, categories: List<CategoryInput>): Result {
-        if (categories.isEmpty()) return Result(emptyList(), max(0.0, income))
+        val incomeInt = Math.round(income).toDouble()
+        if (categories.isEmpty()) return Result(emptyList(), max(0.0, incomeInt))
 
-        val remainders = categories.map { max(0.0, it.monthlyPlan - it.allocatedThisMonth) }
+        val remainders = categories.map { max(0.0, Math.round(it.monthlyPlan - it.allocatedThisMonth).toDouble()) }
         val totalRemainder = remainders.sum()
 
-        if (income <= 0.0 || totalRemainder <= 0.005) {
+        if (incomeInt <= 0.0 || totalRemainder <= 0.5) {
             return Result(
                 categories.mapIndexed { i, c ->
-                    Allocation(
-                        categoryId = c.id,
-                        categoryName = c.name,
-                        icon = c.icon,
-                        plan = c.monthlyPlan,
-                        alreadyAllocated = c.allocatedThisMonth,
-                        remainder = remainders[i],
-                        amount = 0.0,
-                    )
+                    Allocation(c.id, c.name, c.icon, Math.round(c.monthlyPlan).toDouble(), Math.round(c.allocatedThisMonth).toDouble(), remainders[i], 0.0)
                 },
-                surplus = max(0.0, income),
+                surplus = max(0.0, incomeInt),
             )
         }
 
-        val capped = min(income, totalRemainder)
+        val capped = min(incomeInt, totalRemainder)
         val raw = categories.mapIndexed { i, _ -> capped * (remainders[i] / totalRemainder) }
         val amounts = roundPreservingSum(raw, capped)
 
         return Result(
             categories.mapIndexed { i, c ->
-                Allocation(
-                    categoryId = c.id,
-                    categoryName = c.name,
-                    icon = c.icon,
-                    plan = c.monthlyPlan,
-                    alreadyAllocated = c.allocatedThisMonth,
-                    remainder = remainders[i],
-                    amount = amounts[i],
-                )
+                Allocation(c.id, c.name, c.icon, Math.round(c.monthlyPlan).toDouble(), Math.round(c.allocatedThisMonth).toDouble(), remainders[i], amounts[i])
             },
-            surplus = round2(income - capped),
+            surplus = Math.round(incomeInt - capped).toDouble(),
         )
     }
 
-    /**
-     * Пересчёт после ручной правки одной из сумм: «нехватка»/«излишек»
-     * перераспределяется между остальными категориями пропорционально их остаткам.
-     */
     fun adjustManually(
         income: Double,
         allocations: List<Allocation>,
         changedCategoryId: Long,
         newAmount: Double,
     ): List<Double> {
+        val incomeInt = Math.round(income).toDouble()
+        val newAmountInt = Math.round(newAmount).toDouble()
         if (allocations.isEmpty()) return emptyList()
-        val lockedAmount = newAmount.coerceIn(0.0, max(0.0, income))
+        val lockedAmount = newAmountInt.coerceIn(0.0, max(0.0, incomeInt))
         val others = allocations.filter { it.categoryId != changedCategoryId }
-        val othersRemainder = others.sumOf { max(0.0, it.remainder - 0.0) }
-        val rest = income - lockedAmount
+        val othersRemainder = others.sumOf { max(0.0, it.remainder) }
+        val rest = incomeInt - lockedAmount
 
         val result = DoubleArray(allocations.size)
         val indexOf = allocations.mapIndexed { i, a -> a.categoryId to i }.toMap()
@@ -119,43 +91,33 @@ object DistributionCalculator {
             return result.toList()
         }
 
-        if (othersRemainder <= 0.005 || rest <= othersRemainder) {
-            // Распределяем остаток денег пропорционально остаткам по плану.
-            if (othersRemainder <= 0.005) {
-                // Все планы закрыты — делим поровну.
-                val each = rest / others.size
-                others.forEach { result[indexOf.getValue(it.categoryId)] = round2(each) }
+        if (othersRemainder <= 0.5 || rest <= othersRemainder) {
+            if (othersRemainder <= 0.5) {
+                val each = Math.round(rest / others.size).toDouble()
+                // Для поровну нужно точное сохранение суммы в целых
+                val rawEach = others.map { rest / others.size }
+                val rounded = roundPreservingSum(rawEach, rest)
+                others.forEachIndexed { i, a -> result[indexOf.getValue(a.categoryId)] = rounded[i] }
             } else {
                 val raw = others.map { rest * (max(0.0, it.remainder) / othersRemainder) }
                 val rounded = roundPreservingSum(raw, rest)
-                others.forEachIndexed { i, a ->
-                    result[indexOf.getValue(a.categoryId)] = rounded[i]
-                }
+                others.forEachIndexed { i, a -> result[indexOf.getValue(a.categoryId)] = rounded[i] }
             }
         } else {
-            // Денег больше, чем нужно остальным счетам: закрываем планы,
-            // излишек добавляем последнему (он попадёт в «свободные средства»).
             val raw = others.map { max(0.0, it.remainder) }
             val rounded = roundPreservingSum(raw, othersRemainder)
-            others.forEachIndexed { i, a ->
-                result[indexOf.getValue(a.categoryId)] = rounded[i]
-            }
+            others.forEachIndexed { i, a -> result[indexOf.getValue(a.categoryId)] = rounded[i] }
         }
         return result.toList()
     }
 
-    /**
-     * Округление до копеек с сохранением точной суммы:
-     * сначала всё усекается вниз, затем «лишние» копейки достаются тем,
-     * у кого наибольшая дробная часть.
-     */
+    /** Округление до целых рублей с сохранением суммы. */
     fun roundPreservingSum(values: List<Double>, total: Double): List<Double> {
         if (values.isEmpty()) return emptyList()
-        val target = (total * 100).roundToLong()
-        val cents = values.map { (it * 100).toLong() }
-        var delta = (target - cents.sum()).toInt()
-
-        val result = cents.toMutableList()
+        val target = Math.round(total)
+        val ints = values.map { it.toLong() } // floor
+        var delta = (target - ints.sum()).toInt()
+        val result = ints.toMutableList()
         if (delta > 0) {
             val order = values.indices.sortedByDescending { frac(values[it]) }
             var i = 0
@@ -177,11 +139,8 @@ object DistributionCalculator {
                 if (i > order.size * 1000) break
             }
         }
-        return result.map { it / 100.0 }
+        return result.map { it.toDouble() }
     }
 
-    private fun frac(value: Double): Double {
-        val scaled = value * 100
-        return scaled - floor(scaled)
-    }
+    private fun frac(value: Double): Double = value - floor(value)
 }

@@ -6,44 +6,43 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
-/** Форматирование денежных сумм. */
+/** Форматирование денежных сумм — только целые рубли, без копеек. */
 object Formatters {
 
     private val RU: Locale = Locale.forLanguageTag("ru-RU")
 
     private val symbols: DecimalFormatSymbols = DecimalFormatSymbols(RU)
 
-    private val moneyFormat = DecimalFormat("#,##0.##", symbols)
+    private val moneyFormat = DecimalFormat("#,##0", symbols)
 
-    private val signedMoneyFormat = DecimalFormat("+#,##0.##;-#,##0.##", symbols)
+    private val signedMoneyFormat = DecimalFormat("+#,##0;-#,##0", symbols)
 
-    /** «12 345 ₽» / «12 345,50 ₽». */
+    /** «12 345 ₽» — всегда целое, округляем до рубля. */
     fun money(value: Double, currency: String = "₽"): String =
-        moneyFormat.format(round2(value)) + " " + currency
+        moneyFormat.format(roundInt(value)) + if (currency.isNotEmpty()) " $currency" else ""
 
-    /** «+1 200 ₽» / «−1 200 ₽» (для истории операций). */
+    /** «+1 200 ₽» / «−1 200 ₽» — целое. */
     fun signedMoney(value: Double, currency: String = "₽"): String =
-        signedMoneyFormat.format(round2(value)) + " " + currency
+        signedMoneyFormat.format(roundInt(value)) + if (currency.isNotEmpty()) " $currency" else ""
 
-    /** Компактный вид для осей графиков: «12,3К», «850», «1,2М». */
+    /** Компактный вид для осей графиков: «12К», «1М» — без дробей. */
     fun moneyShort(value: Double): String {
-        val v = abs(value)
+        val v = abs(roundInt(value).toDouble())
         val sign = if (value < 0) "−" else ""
         return when {
-            v >= 1_000_000 -> sign + trim(moneyFormat.format(round2(v / 1_000_000))) + "М"
-            v >= 1_000 -> sign + trim(moneyFormat.format(round2(v / 1_000))) + "К"
-            else -> sign + moneyFormat.format(round2(v))
+            v >= 1_000_000 -> sign + moneyFormat.format((v / 1_000_000).roundToLong()) + "М"
+            v >= 1_000 -> sign + moneyFormat.format((v / 1_000).roundToLong()) + "К"
+            else -> sign + moneyFormat.format(v.roundToLong())
         }
     }
 
-    /** «45,5 %». */
+    /** «45 %» — целое. */
     fun percent(fraction: Float): String {
-        val pct = (fraction * 1000).roundToLong() / 10.0
-        return moneyFormat.format(pct) + " %"
+        val pct = (fraction * 100).roundToLong()
+        return "$pct %"
     }
 
-    /** Убирает хвостовые нули и запятую. */
-    private fun trim(s: String): String = s.trimEnd('0').trimEnd(',').trimEnd(' ')
+    fun roundInt(value: Double): Long = Math.round(value)
 
-    fun round2(value: Double): Double = Math.round(value * 100) / 100.0
+    fun round2(value: Double): Double = Math.round(value).toDouble()
 }

@@ -9,11 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -29,9 +31,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -39,13 +42,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.paysplit.app.PaySplitApplication
 import com.paysplit.app.data.model.IncomeSource
-import com.paysplit.app.ui.LocalViewModelFactory
 import com.paysplit.app.ui.components.CategoryAvatar
 import com.paysplit.app.ui.components.CategorySettingsDialog
 import com.paysplit.app.ui.components.ChipRow
@@ -58,10 +61,6 @@ import com.paysplit.app.ui.theme.PayColors
 import com.paysplit.app.util.DateUtils
 import com.paysplit.app.util.Formatters
 
-/**
- * ЭКРАН 3 — Ввод поступления («Пришла зарплата!»).
- * После ввода суммы автоматически считается распределение по счетам.
- */
 @Composable
 fun AddIncomeScreen(
     incomeId: Long,
@@ -98,8 +97,8 @@ fun AddIncomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
                 MoneyInputField(
@@ -118,11 +117,11 @@ fun AddIncomeScreen(
 
             item {
                 Text(
-                    text = "Откуда поступление",
-                    style = MaterialTheme.typography.labelLarge,
+                    text = "Источник",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 ChipRow(
                     options = IncomeSource.entries.toList(),
                     selected = state.source,
@@ -136,8 +135,9 @@ fun AddIncomeScreen(
                     value = state.comment,
                     onValueChange = viewModel::setComment,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Комментарий (необязательно)") },
+                    label = { Text("Комментарий", style = MaterialTheme.typography.labelSmall) },
                     singleLine = true,
+                    textStyle = MaterialTheme.typography.bodySmall,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences,
                         imeAction = ImeAction.Done,
@@ -149,47 +149,36 @@ fun AddIncomeScreen(
                 PayCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Распределение по счетам",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = "Распределение",
+                            style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.weight(1f),
+                            maxLines = 1,
                         )
                         if (state.manualMode) {
-                            TextButton(onClick = viewModel::resetAuto) {
-                                Text("Автоматически")
+                            TextButton(onClick = viewModel::resetAuto, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
+                                Text("Авто", style = MaterialTheme.typography.labelSmall)
                             }
                         }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = if (state.manualMode) {
-                            "Ручная корректировка: при изменении одной суммы остальные пересчитываются"
-                        } else {
-                            "Нажмите на счёт чтобы исключить — сумма перераспределится по остальным"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (state.excludedIds.isNotEmpty()) {
-                        Spacer(Modifier.height(6.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        if (state.excludedIds.isNotEmpty()) {
                             Text(
-                                "Отключено: ${state.excludedIds.size} счетов",
+                                "${state.excludedIds.size} откл.",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
+                                maxLines = 1,
                             )
-                            TextButton(onClick = { viewModel.setAllEnabled(true) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
-                                Text("Включить все", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    } else if (state.allocations.isNotEmpty()) {
-                        Spacer(Modifier.height(4.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            TextButton(onClick = { viewModel.setAllEnabled(false) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
-                                Text("Отключить все", style = MaterialTheme.typography.labelSmall)
+                            TextButton(onClick = { viewModel.setAllEnabled(true) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
+                                Text("Вкл.все", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = if (state.manualMode) "Ручная правка — меняете одну, остальные пересчитаются"
+                        else "Снимите ☑ у лишнего счёта (Авто уже пополнен) — деньги уйдут остальным",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                    )
                     Spacer(Modifier.height(8.dp))
 
                     DistributionTable(
@@ -198,78 +187,59 @@ fun AddIncomeScreen(
                         onEditCategory = { editingCategoryId = it },
                     )
 
-                    if (state.surplus > 0.005) {
-                        Spacer(Modifier.height(10.dp))
+                    if (state.surplus > 0.5) {
+                        Spacer(Modifier.height(8.dp))
                         Surface(
                             color = MaterialTheme.colorScheme.tertiaryContainer,
-                            shape = MaterialTheme.shapes.medium,
+                            shape = MaterialTheme.shapes.small,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                text = "💵 Свободные средства: " +
-                                    Formatters.money(state.surplus, state.currency) +
-                                    " — все планы на месяц закрыты",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "💵 Свободно: ${Formatters.money(state.surplus, state.currency)} — планы закрыты",
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                modifier = Modifier.padding(12.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
 
-                    if (state.undistributed > 0.005 && state.manualMode) {
-                        Spacer(Modifier.height(10.dp))
+                    if (state.undistributed > 0.5 && state.manualMode) {
+                        Spacer(Modifier.height(6.dp))
                         Text(
-                            text = "Нераспределено: " +
-                                Formatters.money(state.undistributed, state.currency),
-                            style = MaterialTheme.typography.bodyMedium,
+                            "Нераспределено: ${Formatters.money(state.undistributed, state.currency)}",
+                            style = MaterialTheme.typography.labelSmall,
                             color = PayColors.warning,
+                            maxLines = 1,
                         )
                     }
 
-                    Spacer(Modifier.height(8.dp))
-                    InfoLine(
-                        label = "Распределено",
-                        value = Formatters.money(state.distributed, state.currency),
-                        bold = true,
-                    )
-                    InfoLine(
-                        label = "Поступление",
-                        value = Formatters.money(state.amount, state.currency),
-                    )
+                    Spacer(Modifier.height(6.dp))
+                    InfoLine(label = "Распределено", value = Formatters.money(state.distributed, state.currency), bold = true)
+                    InfoLine(label = "Поступление", value = Formatters.money(state.amount, state.currency))
                 }
             }
 
             item {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(
                         onClick = hapticClick { viewModel.save() },
                         enabled = state.isAmountValid,
                         modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = "✅ Подтвердить",
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
+                    ) { Text("✅ Подтвердить", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
                     OutlinedButton(
                         onClick = {
                             if (state.manualMode) viewModel.resetAuto()
                             else viewModel.startManualAdjustment()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(if (state.manualMode) "↩️ Автоматический расчёт" else "✏️ Скорректировать")
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    TextButton(
-                        onClick = onDone,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("❌ Отмена") }
+                    ) { Text(if (state.manualMode) "↩️ Авто" else "✏️ Скорректировать", style = MaterialTheme.typography.labelSmall) }
+                    TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text("Отмена", style = MaterialTheme.typography.labelSmall) }
                 }
             }
 
-            item { Spacer(Modifier.height(24.dp)) }
+            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 
@@ -280,12 +250,7 @@ fun AddIncomeScreen(
             currency = state.currency,
             onDismiss = { editingCategoryId = null },
             onSave = { updated ->
-                // План или активность изменились — ручные суммы больше не актуальны.
-                if (updated.monthlyPlan != editingCategory.monthlyPlan ||
-                    updated.isActive != editingCategory.isActive
-                ) {
-                    viewModel.resetAuto()
-                }
+                if (updated.monthlyPlan != editingCategory.monthlyPlan || updated.isActive != editingCategory.isActive) viewModel.resetAuto()
                 viewModel.saveCategory(updated)
                 editingCategoryId = null
             },
@@ -293,8 +258,11 @@ fun AddIncomeScreen(
     }
 }
 
-/** Ширина кнопки редактирования категории в строке таблицы распределения. */
-private val EditButtonWidth = 44.dp
+private val TableCheckboxWidth = 28.dp
+private val TableEditWidth = 28.dp
+private val TablePlanWidth = 62.dp
+private val TableAlreadyWidth = 62.dp
+private val TableNowWidth = 68.dp
 
 @Composable
 private fun DistributionTable(
@@ -304,17 +272,26 @@ private fun DistributionTable(
 ) {
     val manualInputs = remember(state.manualMode) { mutableStateMapOf<Long, String>() }
 
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        // Заголовок — строго те же ширины что и строки
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderCell("", 0.35f, TextAlign.Center)
-            HeaderCell("Категория", 2.0f)
-            HeaderCell("План", 0.9f, TextAlign.End)
-            HeaderCell("Уже", 0.9f, TextAlign.End)
-            HeaderCell("Сейчас", 1.1f, TextAlign.End)
-            Spacer(Modifier.width(EditButtonWidth))
+            Spacer(Modifier.width(TableCheckboxWidth))
+            Text("", Modifier.width(24.dp)) // аватар placeholder
+            Spacer(Modifier.width(4.dp))
+            Text(
+                "Счёт",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.weight(1f).padding(horizontal = 2.dp),
+            )
+            Text("План", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(TablePlanWidth).padding(horizontal = 2.dp))
+            Text("Уже", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(TableAlreadyWidth).padding(horizontal = 2.dp))
+            Text("Сейчас", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(TableNowWidth).padding(horizontal = 2.dp))
+            Spacer(Modifier.width(TableEditWidth))
         }
         Spacer(Modifier.height(4.dp))
 
@@ -323,158 +300,108 @@ private fun DistributionTable(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 5.dp)
+                    .padding(vertical = 3.dp)
                     .alpha(if (isExcluded) 0.45f else 1f),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(
                     checked = !isExcluded,
                     onCheckedChange = { viewModel.toggleCategory(allocation.categoryId) },
-                    modifier = Modifier.padding(end = 2.dp)
+                    modifier = Modifier.size(20.dp).scale(0.85f),
+                    colors = CheckboxDefaults.colors(uncheckedColor = MaterialTheme.colorScheme.outline)
                 )
-                CategoryAvatar(icon = allocation.icon, size = 28)
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(2.dp))
+                CategoryAvatar(icon = allocation.icon, size = 22)
+                Spacer(Modifier.width(4.dp))
                 Text(
                     text = allocation.categoryName,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(2.0f),
+                    modifier = Modifier.weight(1f).padding(end = 2.dp),
                 )
-                Cell(
-                    text = Formatters.money(allocation.plan, ""),
-                    weight = 0.9f,
-                    align = TextAlign.End,
+                // План
+                Text(
+                    Formatters.money(allocation.plan, ""),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    textAlign = TextAlign.End,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.width(TablePlanWidth).padding(horizontal = 2.dp),
                 )
-                Cell(
-                    text = Formatters.money(allocation.alreadyAllocated, ""),
-                    weight = 0.9f,
-                    align = TextAlign.End,
+                // Уже
+                Text(
+                    Formatters.money(allocation.alreadyAllocated, ""),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.width(TableAlreadyWidth).padding(horizontal = 2.dp),
                 )
+                // Сейчас
                 if (isExcluded) {
-                    Cell(
-                        text = "—",
-                        weight = 1.1f,
-                        align = TextAlign.End,
+                    Text(
+                        "—",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End,
+                        maxLines = 1,
+                        modifier = Modifier.width(TableNowWidth).padding(horizontal = 2.dp),
                     )
                 } else if (state.manualMode) {
-                    val current = manualInputs.getOrPut(allocation.categoryId) {
-                        formatInput(allocation.amount)
-                    }
+                    val current = manualInputs.getOrPut(allocation.categoryId) { formatInput(allocation.amount) }
                     OutlinedTextField(
                         value = current,
                         onValueChange = { input ->
-                            val filtered = input.filter { it.isDigit() || it == '.' || it == ',' }
+                            val filtered = input.filter { it.isDigit() }
                             manualInputs[allocation.categoryId] = filtered
                             com.paysplit.app.ui.components.parseMoney(filtered)?.let { value ->
                                 viewModel.setManualAmount(allocation.categoryId, value)
+                            } ?: run {
+                                if (filtered.isEmpty()) viewModel.setManualAmount(allocation.categoryId, 0.0)
                             }
                         },
-                        modifier = Modifier
-                            .weight(1.1f)
-                            .padding(start = 4.dp),
+                        modifier = Modifier.width(TableNowWidth).padding(start = 2.dp),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodySmall,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = ImeAction.Done,
-                        ),
+                        textStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, textAlign = TextAlign.End),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     )
                 } else {
-                    Cell(
-                        text = Formatters.money(allocation.amount, ""),
-                        weight = 1.1f,
-                        align = TextAlign.End,
-                        bold = true,
+                    Text(
+                        Formatters.money(allocation.amount, ""),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
                         color = PayColors.income,
+                        textAlign = TextAlign.End,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.width(TableNowWidth).padding(horizontal = 2.dp),
                     )
                 }
+                // Карандаш — компактнее
                 TextButton(
                     onClick = { onEditCategory(allocation.categoryId) },
-                    modifier = Modifier.width(EditButtonWidth),
+                    modifier = Modifier.width(TableEditWidth).height(20.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
                     enabled = !isExcluded,
                 ) {
-                    Text("✏️", modifier = Modifier.alpha(if (isExcluded) 0.4f else 1f))
+                    Text("✏️", fontSize = 11.sp, modifier = Modifier.alpha(if (isExcluded) 0.3f else 1f))
                 }
             }
         }
 
         if (state.allocations.isEmpty()) {
-            Text(
-                text = "Нет активных категорий. Добавьте их в разделе «Счета».",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "💡 Снимите галочку у счёта (например, Авто), если он уже пополнен — его сумма распределится по остальным.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text("Нет счетов. Добавьте во вкладке Счета.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
     }
 }
 
-// RowScope нужен, чтобы Modifier.weight() работал внутри этих ячеек таблицы:
-// weight — расширение именно на RowScope/ColumnScope.
-@Composable
-private fun RowScope.HeaderCell(text: String, weight: Float, align: TextAlign = TextAlign.Start) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = align,
-        modifier = Modifier
-            .weight(weight)
-            .padding(horizontal = 2.dp),
-    )
-}
-
-@Composable
-private fun RowScope.Cell(
-    text: String,
-    weight: Float,
-    align: TextAlign = TextAlign.Start,
-    bold: Boolean = false,
-    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-        color = color,
-        textAlign = align,
-        modifier = Modifier
-            .weight(weight)
-            .padding(horizontal = 2.dp),
-    )
-}
-
 @Composable
 private fun InfoLine(label: String, value: String, bold: Boolean = false) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-        )
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.labelSmall, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Clip)
     }
 }
 
-private fun formatInput(value: Double): String =
-    if (value % 1.0 == 0.0) value.toLong().toString()
-    else value.toString().replace('.', ',')
+private fun formatInput(value: Double): String = Math.round(value).toString()
