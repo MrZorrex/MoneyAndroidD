@@ -258,11 +258,11 @@ fun AddIncomeScreen(
     }
 }
 
-private val TableCheckboxWidth = 28.dp
-private val TableEditWidth = 28.dp
-private val TablePlanWidth = 62.dp
-private val TableAlreadyWidth = 62.dp
-private val TableNowWidth = 68.dp
+private val TableCheckboxWidth = 24.dp
+private val TableEditWidth = 24.dp
+private val TablePlanWidth = 52.dp
+private val TableAlreadyWidth = 52.dp
+private val TableNowWidth = 60.dp
 
 @Composable
 private fun DistributionTable(
@@ -279,21 +279,21 @@ private fun DistributionTable(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Spacer(Modifier.width(TableCheckboxWidth))
-            Text("", Modifier.width(24.dp)) // аватар placeholder
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(20.dp)) // аватар placeholder
+            Spacer(Modifier.width(6.dp))
             Text(
                 "Счёт",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                modifier = Modifier.weight(1f).padding(horizontal = 2.dp),
+                modifier = Modifier.weight(1f).padding(horizontal = 1.dp),
             )
-            Text("План", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(TablePlanWidth).padding(horizontal = 2.dp))
-            Text("Уже", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(TableAlreadyWidth).padding(horizontal = 2.dp))
-            Text("Сейчас", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(TableNowWidth).padding(horizontal = 2.dp))
+            Text("План", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, softWrap = false, modifier = Modifier.width(TablePlanWidth).padding(horizontal = 1.dp))
+            Text("Уже", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, softWrap = false, modifier = Modifier.width(TableAlreadyWidth).padding(horizontal = 1.dp))
+            Text("Сейчас", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, maxLines = 1, softWrap = false, modifier = Modifier.width(TableNowWidth).padding(horizontal = 1.dp))
             Spacer(Modifier.width(TableEditWidth))
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(2.dp))
 
         state.allocations.forEach { allocation ->
             val isExcluded = allocation.categoryId in state.excludedIds
@@ -307,47 +307,49 @@ private fun DistributionTable(
                 Checkbox(
                     checked = !isExcluded,
                     onCheckedChange = { viewModel.toggleCategory(allocation.categoryId) },
-                    modifier = Modifier.size(20.dp).scale(0.85f),
+                    modifier = Modifier.size(16.dp).scale(0.85f),
                     colors = CheckboxDefaults.colors(uncheckedColor = MaterialTheme.colorScheme.outline)
                 )
-                Spacer(Modifier.width(2.dp))
-                CategoryAvatar(icon = allocation.icon, size = 22)
                 Spacer(Modifier.width(4.dp))
+                CategoryAvatar(icon = allocation.icon, size = 20)
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = allocation.categoryName,
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 13.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(end = 2.dp),
+                    modifier = Modifier.weight(1f).padding(end = 4.dp),
                 )
                 // План
                 Text(
                     Formatters.money(allocation.plan, ""),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     textAlign = TextAlign.End,
                     maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.width(TablePlanWidth).padding(horizontal = 2.dp),
+                    overflow = TextOverflow.Visible,
+                    softWrap = false,
+                    modifier = Modifier.width(TablePlanWidth).padding(horizontal = 1.dp),
                 )
                 // Уже
                 Text(
                     Formatters.money(allocation.alreadyAllocated, ""),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.End,
                     maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.width(TableAlreadyWidth).padding(horizontal = 2.dp),
+                    overflow = TextOverflow.Visible,
+                    softWrap = false,
+                    modifier = Modifier.width(TableAlreadyWidth).padding(horizontal = 1.dp),
                 )
                 // Сейчас
                 if (isExcluded) {
                     Text(
                         "—",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.End,
                         maxLines = 1,
-                        modifier = Modifier.width(TableNowWidth).padding(horizontal = 2.dp),
+                        modifier = Modifier.width(TableNowWidth).padding(horizontal = 1.dp),
                     )
                 } else if (state.manualMode) {
                     val current = manualInputs.getOrPut(allocation.categoryId) { formatInput(allocation.amount) }
@@ -362,30 +364,31 @@ private fun DistributionTable(
                                 if (filtered.isEmpty()) viewModel.setManualAmount(allocation.categoryId, 0.0)
                             }
                         },
-                        modifier = Modifier.width(TableNowWidth).padding(start = 2.dp),
+                        modifier = Modifier.width(TableNowWidth).padding(start = 1.dp),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, textAlign = TextAlign.End),
+                        textStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, textAlign = TextAlign.End),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     )
                 } else {
                     Text(
                         Formatters.money(allocation.amount, ""),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
                         color = PayColors.income,
                         textAlign = TextAlign.End,
                         maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.width(TableNowWidth).padding(horizontal = 2.dp),
+                        overflow = TextOverflow.Visible,
+                        softWrap = false,
+                        modifier = Modifier.width(TableNowWidth).padding(horizontal = 1.dp),
                     )
                 }
                 // Карандаш — компактнее
                 TextButton(
                     onClick = { onEditCategory(allocation.categoryId) },
-                    modifier = Modifier.width(TableEditWidth).height(20.dp),
+                    modifier = Modifier.width(TableEditWidth).height(18.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
                     enabled = !isExcluded,
                 ) {
-                    Text("✏️", fontSize = 11.sp, modifier = Modifier.alpha(if (isExcluded) 0.3f else 1f))
+                    Text("✏️", fontSize = 10.sp, modifier = Modifier.alpha(if (isExcluded) 0.3f else 1f))
                 }
             }
         }
