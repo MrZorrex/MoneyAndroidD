@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -28,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -162,12 +164,33 @@ fun AddIncomeScreen(
                         text = if (state.manualMode) {
                             "Ручная корректировка: при изменении одной суммы остальные пересчитываются"
                         } else {
-                            "Рассчитано пропорционально остаткам по плану"
+                            "Нажмите на счёт чтобы исключить — сумма перераспределится по остальным"
                         },
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(Modifier.height(12.dp))
+                    if (state.excludedIds.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                "Отключено: ${state.excludedIds.size} счетов",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { viewModel.setAllEnabled(true) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                                Text("Включить все", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    } else if (state.allocations.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = { viewModel.setAllEnabled(false) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                                Text("Отключить все", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
 
                     DistributionTable(
                         state = state,
@@ -279,43 +302,48 @@ private fun DistributionTable(
     viewModel: AddIncomeViewModel,
     onEditCategory: (Long) -> Unit,
 ) {
-    // Текстовые поля ручного ввода пересоздаются при каждом входе в ручной режим,
-    // чтобы совпадать с заново рассчитанными суммами.
     val manualInputs = remember(state.manualMode) { mutableStateMapOf<Long, String>() }
 
     Column {
-        // Заголовок таблицы
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            HeaderCell("", 0.35f, TextAlign.Center)
             HeaderCell("Категория", 2.0f)
-            HeaderCell("План", 1f, TextAlign.End)
+            HeaderCell("План", 0.9f, TextAlign.End)
             HeaderCell("Уже", 0.9f, TextAlign.End)
             HeaderCell("Сейчас", 1.1f, TextAlign.End)
             Spacer(Modifier.width(EditButtonWidth))
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
 
         state.allocations.forEach { allocation ->
+            val isExcluded = allocation.categoryId in state.excludedIds
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = 5.dp)
+                    .alpha(if (isExcluded) 0.45f else 1f),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CategoryAvatar(icon = allocation.icon, size = 30)
-                Spacer(Modifier.width(6.dp))
+                Checkbox(
+                    checked = !isExcluded,
+                    onCheckedChange = { viewModel.toggleCategory(allocation.categoryId) },
+                    modifier = Modifier.padding(end = 2.dp)
+                )
+                CategoryAvatar(icon = allocation.icon, size = 28)
+                Spacer(Modifier.width(5.dp))
                 Text(
                     text = allocation.categoryName,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(2.0f),
                 )
                 Cell(
                     text = Formatters.money(allocation.plan, ""),
-                    weight = 1f,
+                    weight = 0.9f,
                     align = TextAlign.End,
                 )
                 Cell(
@@ -324,7 +352,14 @@ private fun DistributionTable(
                     align = TextAlign.End,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (state.manualMode) {
+                if (isExcluded) {
+                    Cell(
+                        text = "—",
+                        weight = 1.1f,
+                        align = TextAlign.End,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else if (state.manualMode) {
                     val current = manualInputs.getOrPut(allocation.categoryId) {
                         formatInput(allocation.amount)
                     }
@@ -341,7 +376,7 @@ private fun DistributionTable(
                             .weight(1.1f)
                             .padding(start = 4.dp),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
+                        textStyle = MaterialTheme.typography.bodySmall,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Decimal,
                             imeAction = ImeAction.Done,
@@ -360,16 +395,24 @@ private fun DistributionTable(
                     onClick = { onEditCategory(allocation.categoryId) },
                     modifier = Modifier.width(EditButtonWidth),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                    enabled = !isExcluded,
                 ) {
-                    Text("✏️")
+                    Text("✏️", modifier = Modifier.alpha(if (isExcluded) 0.4f else 1f))
                 }
             }
         }
 
         if (state.allocations.isEmpty()) {
             Text(
-                text = "Нет активных категорий. Добавьте их в разделе «Категории».",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Нет активных категорий. Добавьте их в разделе «Счета».",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "💡 Снимите галочку у счёта (например, Авто), если он уже пополнен — его сумма распределится по остальным.",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

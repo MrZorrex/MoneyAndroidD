@@ -365,41 +365,59 @@ private fun BalanceCorrectDialog(
                         Text("Сейчас: ${Formatters.money(currentBalance, currency)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)) {
+                    Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Как это работает:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text("• «На сумму» — прибавляет/списывает разницу. • «Установить» — задаёт точный новый баланс.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(selected = mode == 0, onClick = { mode = 0 }, label = { Text("На сумму", style = MaterialTheme.typography.labelSmall) })
-                    FilterChip(selected = mode == 1, onClick = { mode = 1 }, label = { Text("Установить", style = MaterialTheme.typography.labelSmall) })
+                    FilterChip(selected = mode == 0, onClick = { mode = 0 }, label = { Text("➕➖ На сумму", style = MaterialTheme.typography.labelSmall) })
+                    FilterChip(selected = mode == 1, onClick = { mode = 1 }, label = { Text("🎯 Установить баланс", style = MaterialTheme.typography.labelSmall) })
                 }
                 if (mode == 0) {
+                    Text("Укажите сколько прибавить или списать:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(selected = isIncrease, onClick = { isIncrease = true }, label = { Text("＋", style = MaterialTheme.typography.labelMedium) })
-                        FilterChip(selected = !isIncrease, onClick = { isIncrease = false }, label = { Text("−", style = MaterialTheme.typography.labelMedium) })
+                        FilterChip(selected = isIncrease, onClick = { isIncrease = true }, label = { Text("＋ Пополнить", style = MaterialTheme.typography.labelSmall) })
+                        FilterChip(selected = !isIncrease, onClick = { isIncrease = false }, label = { Text("− Списать", style = MaterialTheme.typography.labelSmall) })
                     }
-                    MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма, $currency")
+                    MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма коррекции, $currency")
                     val parsed = com.paysplit.app.ui.components.parseMoney(amountText)
                     if (parsed != null && parsed > 0) {
                         val preview = if (isIncrease) currentBalance + parsed else currentBalance - parsed
-                        Text("Станет: ${Formatters.money(preview, currency)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                        androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) {
+                            Text("Было ${Formatters.money(currentBalance, currency)} ${if (isIncrease) "+" else "−"} ${Formatters.money(parsed, currency)} → станет ${Formatters.money(preview, currency)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(8.dp))
+                        }
+                    } else Text("Пример: было 5 000 ₽ + 1 000 ₽ → станет 6 000 ₽", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
+                    Text("Введите какой баланс должен стать:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     MoneyInputField(value = newBalanceText, onValueChange = { newBalanceText = it }, label = "Новый баланс, $currency")
                     val parsed = com.paysplit.app.ui.components.parseMoney(newBalanceText)
                     if (parsed != null) {
-                        Text("Δ ${Formatters.money(parsed - currentBalance, currency)}", style = MaterialTheme.typography.labelSmall, color = if (parsed >= currentBalance) PayColors.income else PayColors.expense)
-                    }
+                        val delta = parsed - currentBalance
+                        androidx.compose.material3.Surface(color = if (delta >= 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) {
+                            Column(Modifier.padding(8.dp)) {
+                                Text("Было ${Formatters.money(currentBalance, currency)} → станет ${Formatters.money(parsed, currency)}", style = MaterialTheme.typography.labelSmall)
+                                Text("Запишется: ${if (delta >= 0) "+" else ""}${Formatters.money(delta, currency)} ${if (delta >= 0) "пополнение" else "списание"}", style = MaterialTheme.typography.labelSmall, color = if (delta >= 0) PayColors.income else PayColors.expense, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    } else Text("Пример: было 5 000 ₽ → ввели 8 000 ₽ → запишется +3 000 ₽", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 OutlinedTextField(
                     value = commentText,
                     onValueChange = { commentText = com.paysplit.app.ui.components.capitalizeFirst(it) },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Комментарий", style = MaterialTheme.typography.labelSmall) },
-                    placeholder = { Text("Напр.: коррекция, нашёл...", style = MaterialTheme.typography.labelSmall) },
+                    placeholder = { Text("Напр.: исправил ошибку, нашёл наличные...", style = MaterialTheme.typography.labelSmall) },
                     textStyle = MaterialTheme.typography.bodySmall,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 )
-                DateField(date = date, onDateChange = { date = it }, label = "Дата")
+                DateField(date = date, onDateChange = { date = it }, label = "Дата коррекции")
+                Text("Коррекция попадёт в историю — можно удалить.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = {
+            val canSave = if (mode == 0) (com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0) > 0 else com.paysplit.app.ui.components.parseMoney(newBalanceText) != null
             Button(onClick = {
                 if (mode == 0) {
                     val a = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
@@ -408,7 +426,7 @@ private fun BalanceCorrectDialog(
                     val nb = com.paysplit.app.ui.components.parseMoney(newBalanceText)
                     if (nb != null) onConfirmNewBalance(nb, commentText, date)
                 }
-            }) { Text("Сохранить", style = MaterialTheme.typography.labelMedium) }
+            }, enabled = canSave) { Text("Сохранить", style = MaterialTheme.typography.labelMedium) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
     )
