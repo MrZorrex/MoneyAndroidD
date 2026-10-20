@@ -54,25 +54,31 @@ class CategoryDetailViewModel(
                 .sumOf { it.amount }
             val transferIn = data.transfers.filter { it.toCategoryId == categoryId && it.date <= mEnd }
                 .sumOf { it.amount }
+            val adjIn = data.adjustments.filter { it.categoryId == categoryId && it.date <= mEnd && it.amount > 0 }
+                .sumOf { it.amount }
             val outflow = data.expenses.filter { it.categoryId == categoryId && it.date <= mEnd }
                 .sumOf { it.amount }
             val transferOut = data.transfers.filter { it.fromCategoryId == categoryId && it.date <= mEnd }
                 .sumOf { it.amount }
-            ym to (inflow + transferIn - outflow - transferOut)
+            val adjOut = data.adjustments.filter { it.categoryId == categoryId && it.date <= mEnd && it.amount < 0 }
+                .sumOf { -it.amount }
+            ym to (inflow + transferIn + adjIn - outflow - transferOut - adjOut)
         }
         val monthlyStats = months.map { ym ->
             val mStart = DateUtils.millisOf(ym.atDay(1))
             val mEnd = DateUtils.millisOf(ym.atEndOfMonth()) + 86_400_000L - 1
+            val adjIncome = data.adjustments.filter { it.categoryId == categoryId && it.date in mStart..mEnd && it.amount > 0 }.sumOf { it.amount }
+            val adjExpense = data.adjustments.filter { it.categoryId == categoryId && it.date in mStart..mEnd && it.amount < 0 }.sumOf { -it.amount }
             AnalyticsEngine.MonthStat(
                 yearMonth = ym,
                 income = data.distributions.filter { it.categoryId == categoryId && it.date in mStart..mEnd }
                     .sumOf { it.amount } +
                     data.transfers.filter { it.toCategoryId == categoryId && it.date in mStart..mEnd }
-                        .sumOf { it.amount },
+                        .sumOf { it.amount } + adjIncome,
                 expense = data.expenses.filter { it.categoryId == categoryId && it.date in mStart..mEnd }
                     .sumOf { it.amount } +
                     data.transfers.filter { it.fromCategoryId == categoryId && it.date in mStart..mEnd }
-                        .sumOf { it.amount },
+                        .sumOf { it.amount } + adjExpense,
             )
         }
 
@@ -116,8 +122,30 @@ class CategoryDetailViewModel(
 
                 com.paysplit.app.data.model.TxType.INCOME ->
                     repository.deleteIncome(transaction.sourceId)
+
+                com.paysplit.app.data.model.TxType.ADJUSTMENT ->
+                    repository.deleteAdjustment(transaction.sourceId)
             }
         }
+    }
+
+    /** Коррекция баланса с комментарием. */
+    fun adjustBalance(amount: Double, comment: String?, date: Long = System.currentTimeMillis()) {
+        viewModelScope.launch {
+            repository.addAdjustment(
+                com.paysplit.app.data.model.BalanceAdjustmentEntity(
+                    categoryId = categoryId,
+                    amount = amount,
+                    date = date,
+                    comment = comment,
+                )
+            )
+        }
+    }
+
+    fun setBalanceTo(newBalance: Double, comment: String?, currentBalance: Double, date: Long = System.currentTimeMillis()) {
+        val delta = newBalance - currentBalance
+        if (delta != 0.0) adjustBalance(delta, comment, date)
     }
 
     /** Быстрый расход с этого счёта. */

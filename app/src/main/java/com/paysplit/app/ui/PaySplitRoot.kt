@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -51,6 +51,7 @@ import com.paysplit.app.PaySplitApplication
 import com.paysplit.app.R
 import com.paysplit.app.data.model.AppData
 import com.paysplit.app.data.model.ThemeMode
+import com.paysplit.app.ui.accounts.AccountsScreen
 import com.paysplit.app.ui.analytics.AnalyticsScreen
 import com.paysplit.app.ui.categories.CategoriesScreen
 import com.paysplit.app.ui.category.CategoryDetailScreen
@@ -137,7 +138,7 @@ private fun MainScaffold() {
 
     val items = listOf(
         BottomItem(Routes.DASHBOARD, "Главная", Icons.Filled.Home),
-        BottomItem(Routes.addExpense(), "Расход", Icons.Filled.Add),
+        BottomItem(Routes.ACCOUNTS, "Счета", Icons.Filled.AccountBalanceWallet),
         BottomItem(Routes.HISTORY, "История", Icons.Filled.DateRange),
         BottomItem(Routes.ANALYTICS, "Аналитика", R.drawable.ic_chart),
         BottomItem(Routes.SETTINGS, "Настройки", Icons.Filled.Settings),
@@ -160,7 +161,7 @@ private fun MainScaffold() {
                                     )
                                 }
                             },
-                            label = { Text(item.label) },
+                            label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
                                 indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -193,9 +194,15 @@ private fun MainScaffold() {
             composable(Routes.DASHBOARD) {
                 DashboardScreen(
                     onAddIncome = { navController.navigate(Routes.addIncome()) },
-                    onAddExpense = { navController.navigateToTab(Routes.addExpense()) },
+                    onAddExpense = { navController.navigate(Routes.addExpense()) },
                     onCategoryClick = { id -> navController.navigate(Routes.categoryDetail(id)) },
-                    onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
+                    onOpenAccounts = { navController.navigateToTab(Routes.ACCOUNTS) },
+                )
+            }
+
+            composable(Routes.ACCOUNTS) {
+                AccountsScreen(
+                    onCategoryClick = { id -> navController.navigate(Routes.categoryDetail(id)) },
                 )
             }
 

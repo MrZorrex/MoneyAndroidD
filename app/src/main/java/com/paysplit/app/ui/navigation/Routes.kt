@@ -18,6 +18,7 @@ object Routes {
     const val CATEGORY_DETAIL = "category/{categoryId}"
     const val ARG_CATEGORY_ID = "categoryId"
     const val CATEGORIES = "categories"
+    const val ACCOUNTS = "accounts"
 
     fun addIncome(): String = "add_income?incomeId=0"
 
@@ -29,6 +30,6 @@ object Routes {
 
     fun categoryDetail(categoryId: Long): String = "category/$categoryId"
 
-    /** Экраны нижней панели (по началу маршрута). */
-    val bottomBarRoutes = setOf("dashboard", "add_expense", "history", "analytics", "settings")
+    /** Экраны нижней панели (по началу маршрута) — 5 вкладок. */
+    val bottomBarRoutes = setOf("dashboard", "accounts", "history", "analytics", "settings")
 }

@@ -95,6 +95,27 @@ object TransactionBuilder {
                 }
         }
 
+        if (filter == TxFilter.ALL || filter == TxFilter.ADJUSTMENT) {
+            data.adjustments
+                .filter { it.date in from..to && (categoryId == null || it.categoryId == categoryId) }
+                .forEach { adj ->
+                    val category = data.category(adj.categoryId)
+                    val isPositive = adj.amount >= 0
+                    result += UiTransaction(
+                        id = adj.id,
+                        date = adj.date,
+                        type = TxType.ADJUSTMENT,
+                        amount = kotlin.math.abs(adj.amount),
+                        categoryId = adj.categoryId,
+                        categoryName = category?.name ?: "Без категории",
+                        icon = category?.icon ?: "⚖️",
+                        title = if (isPositive) "Коррекция +" else "Коррекция −",
+                        comment = adj.comment,
+                        sourceId = adj.id,
+                    )
+                }
+        }
+
         return result.sortedWith(
             compareByDescending<UiTransaction> { it.date }.thenByDescending { it.id },
         )

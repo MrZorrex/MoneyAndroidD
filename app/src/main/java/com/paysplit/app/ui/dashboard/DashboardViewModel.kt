@@ -64,7 +64,7 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
             monthExpense = stats.totalExpense,
             balances = balances,
             expenseByCategory = stats.byCategory,
-            recentTransactions = TransactionBuilder.build(data, monthStart, monthEnd).take(5),
+            recentTransactions = TransactionBuilder.build(data, monthStart, monthEnd).take(12),
             currency = data.settings.currency,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())

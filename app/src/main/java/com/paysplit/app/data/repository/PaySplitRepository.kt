@@ -3,6 +3,7 @@ package com.paysplit.app.data.repository
 import androidx.room.withTransaction
 import com.paysplit.app.data.local.AppDatabase
 import com.paysplit.app.data.model.AppData
+import com.paysplit.app.data.model.BalanceAdjustmentEntity
 import com.paysplit.app.data.model.CategoryEntity
 import com.paysplit.app.data.model.DistributionEntity
 import com.paysplit.app.data.model.ExpenseEntity
@@ -12,7 +13,6 @@ import com.paysplit.app.data.model.TransferEntity
 import com.paysplit.app.domain.DefaultCategories
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 
 /**
  * Единая точка доступа к данным. Отдаёт поток [data] со снимком всей базы —
@@ -24,6 +24,7 @@ class PaySplitRepository(private val db: AppDatabase) {
     private val incomeDao = db.incomeDao()
     private val expenseDao = db.expenseDao()
     private val transferDao = db.transferDao()
+    private val adjustmentDao = db.balanceAdjustmentDao()
     private val settingsDao = db.settingsDao()
 
     private data class CoreData(
@@ -43,13 +44,17 @@ class PaySplitRepository(private val db: AppDatabase) {
     }
 
     /** Полный снимок базы данных. */
-    val data: Flow<AppData> = combine(core, transferDao.observeAll(), settingsDao.observe()) { c, transfers, settings ->
+    val data: Flow<AppData> = combine(
+        combine(core, transferDao.observeAll()) { c, transfers -> c to transfers },
+        combine(adjustmentDao.observeAll(), settingsDao.observe()) { adj, settings -> adj to settings }
+    ) { (c, transfers), (adjustments, settings) ->
         AppData(
             categories = c.categories,
             incomes = c.incomes,
             expenses = c.expenses,
             distributions = c.distributions,
             transfers = transfers,
+            adjustments = adjustments,
             settings = settings ?: SettingsEntity(),
         )
     }
@@ -131,6 +136,17 @@ class PaySplitRepository(private val db: AppDatabase) {
 
     suspend fun getTransfer(id: Long): TransferEntity? = transferDao.getById(id)
 
+    // ---------------- Коррекции баланса ----------------
+
+    suspend fun addAdjustment(adjustment: BalanceAdjustmentEntity): Long =
+        adjustmentDao.insert(adjustment)
+
+    suspend fun deleteAdjustment(id: Long) {
+        adjustmentDao.deleteById(id)
+    }
+
+    suspend fun getAdjustment(id: Long): BalanceAdjustmentEntity? = adjustmentDao.getById(id)
+
     // ---------------- Категории ----------------
 
     suspend fun saveCategory(category: CategoryEntity): Long =
@@ -190,6 +206,7 @@ class PaySplitRepository(private val db: AppDatabase) {
             expenses = expenseDao.getAll(),
             distributions = incomeDao.getAllDistributions(),
             transfers = transferDao.getAll(),
+            adjustments = adjustmentDao.getAll(),
             settings = settingsDao.get() ?: SettingsEntity(),
         )
     }

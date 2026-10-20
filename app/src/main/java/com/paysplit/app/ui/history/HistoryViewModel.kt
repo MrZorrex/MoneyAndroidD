@@ -111,6 +111,9 @@ class HistoryViewModel(private val repository: PaySplitRepository) : ViewModel()
 
                 com.paysplit.app.data.model.TxType.INCOME ->
                     repository.deleteIncome(transaction.sourceId)
+
+                com.paysplit.app.data.model.TxType.ADJUSTMENT ->
+                    repository.deleteAdjustment(transaction.sourceId)
             }
         }
     }

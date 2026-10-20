@@ -132,6 +132,35 @@ data class TransferEntity(
     val createdAt: Long = System.currentTimeMillis(),
 )
 
+/**
+ * Корректировка баланса счёта.
+ * Позволяет вручную изменить текущую сумму счёта с комментарием
+ * (например: «нашёл в кармане», «ошибка учёта», «снял наличные без чека»).
+ * Положительная сумма — пополнение, отрицательная — списание.
+ */
+@Entity(
+    tableName = "balance_adjustments",
+    foreignKeys = [
+        ForeignKey(
+            entity = CategoryEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["categoryId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("categoryId"), Index("date")],
+)
+data class BalanceAdjustmentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val categoryId: Long,
+    /** Сумма коррекции: + пополнение, − списание. */
+    val amount: Double,
+    val date: Long,
+    /** Комментарий пользователя к корректировке. */
+    val comment: String? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
 /** Настройки приложения (единственная строка с id = 1). */
 @Entity(tableName = "settings")
 data class SettingsEntity(

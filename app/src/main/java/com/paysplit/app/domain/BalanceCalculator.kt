@@ -9,9 +9,9 @@ import kotlin.math.max
 /**
  * Расчёт балансов счетов.
  *
- * Для категорий «Оплата сразу»: баланс = распределено за месяц − потрачено за месяц.
- * Для накопительных: баланс = все поступления за всё время − все расходы за всё время.
- * Переводы уменьшают счёт-источник и увеличиют счёт-получатель.
+ * Для категорий «Оплата сразу»: баланс = распределено за месяц − потрачено за месяц + коррекции.
+ * Для накопительных: баланс = все поступления за всё время − все расходы за всё время + коррекции.
+ * Переводы и коррекции уменьшают/увеличивают баланс соответственно дате.
  */
 object BalanceCalculator {
 
@@ -62,6 +62,14 @@ object BalanceCalculator {
                 (outflowMonthWithTransfers[t.fromCategoryId] ?: 0.0) + t.amount
         }
 
+        // Коррекции баланса: положительные — приход, отрицательные — расход
+        val adjustmentMonth = data.adjustments.filter { it.date in monthStart..monthEnd }
+            .groupBy { it.categoryId }
+            .mapValues { e -> e.value.sumOf { it.amount } }
+        // Для накопительных учитываем все коррекции, для instant — только месячные
+        val adjustmentMonthPositive = adjustmentMonth.mapValues { max(0.0, it.value) }
+        val adjustmentMonthNegative = adjustmentMonth.mapValues { -minOf(0.0, it.value) }
+
         val inflowAll = data.distributions.groupBy { it.categoryId }
             .mapValues { entry -> entry.value.sumOf { it.amount } }
         val outflowAll = data.expenses.groupBy { it.categoryId }
@@ -74,10 +82,32 @@ object BalanceCalculator {
             outflowAllWithTransfers[t.fromCategoryId] =
                 (outflowAllWithTransfers[t.fromCategoryId] ?: 0.0) + t.amount
         }
+        // Все коррекции для all-time
+        val adjustmentAll = data.adjustments.groupBy { it.categoryId }
+            .mapValues { e -> e.value.sumOf { it.amount } }
+        // Добавляем коррекции к all-time
+        adjustmentAll.forEach { (catId, delta) ->
+            if (delta >= 0) {
+                inflowAllWithTransfers[catId] = (inflowAllWithTransfers[catId] ?: 0.0) + delta
+            } else {
+                outflowAllWithTransfers[catId] = (outflowAllWithTransfers[catId] ?: 0.0) + (-delta)
+            }
+        }
+        // Добавляем месячные коррекции к месячным показателям
+        // (разделяем на приход/расход)
+        val inflowMonthFinal = inflowMonthWithTransfers.toMutableMap()
+        val outflowMonthFinal = outflowMonthWithTransfers.toMutableMap()
+        adjustmentMonth.forEach { (catId, delta) ->
+            if (delta >= 0) {
+                inflowMonthFinal[catId] = (inflowMonthFinal[catId] ?: 0.0) + delta
+            } else {
+                outflowMonthFinal[catId] = (outflowMonthFinal[catId] ?: 0.0) + (-delta)
+            }
+        }
 
         return data.categories.map { category ->
-            val allocMonth = inflowMonthWithTransfers[category.id] ?: 0.0
-            val spendMonth = outflowMonthWithTransfers[category.id] ?: 0.0
+            val allocMonth = inflowMonthFinal[category.id] ?: 0.0
+            val spendMonth = outflowMonthFinal[category.id] ?: 0.0
             val allocAll = inflowAllWithTransfers[category.id] ?: 0.0
             val spendAll = outflowAllWithTransfers[category.id] ?: 0.0
 
@@ -118,20 +148,22 @@ object BalanceCalculator {
         }
     }
 
-    /** Общий баланс по всем счетам (доходы минус расходы за всё время). */
+    /** Общий баланс по всем счетам (доходы + коррекции - расходы за всё время). */
     fun totalBalance(data: AppData): Double {
-        val income = data.distributions.sumOf { it.amount } + data.transfers.sumOf { it.amount }
-        val expense = data.expenses.sumOf { it.amount } + data.transfers.sumOf { it.amount }
+        val income = data.distributions.sumOf { it.amount } + data.transfers.sumOf { it.amount } + data.adjustments.filter { it.amount > 0 }.sumOf { it.amount }
+        val expense = data.expenses.sumOf { it.amount } + data.transfers.sumOf { it.amount } + data.adjustments.filter { it.amount < 0 }.sumOf { -it.amount }
         return income - expense
     }
 
     /** Сумма, распределённая по счетам за месяц. */
     fun allocatedThisMonth(data: AppData, monthStart: Long, monthEnd: Long): Double =
-        data.distributions.filter { it.date in monthStart..monthEnd }.sumOf { it.amount }
+        data.distributions.filter { it.date in monthStart..monthEnd }.sumOf { it.amount } +
+            data.adjustments.filter { it.date in monthStart..monthEnd && it.amount > 0 }.sumOf { it.amount }
 
     /** Сумма расходов за месяц. */
     fun spentThisMonth(data: AppData, monthStart: Long, monthEnd: Long): Double =
-        data.expenses.filter { it.date in monthStart..monthEnd }.sumOf { it.amount }
+        data.expenses.filter { it.date in monthStart..monthEnd }.sumOf { it.amount } +
+            data.adjustments.filter { it.date in monthStart..monthEnd && it.amount < 0 }.sumOf { -it.amount }
 
     /** Сумма поступлений (зарплат) за месяц. */
     fun incomeThisMonth(data: AppData, monthStart: Long, monthEnd: Long): Double =
