@@ -204,12 +204,15 @@ fun AccountsScreen(
     }
 
     if (adjust.visible) {
+        val freeBal = state.items.firstOrNull { it.category.name.contains("Свобод") || it.category.icon == "💵" }?.balance
         BalanceAdjustDialog(
             state = adjust,
             currency = state.currency,
+            freeFundsBalance = freeBal,
             onDismiss = viewModel::dismissBalanceAdjust,
             onConfirmDelta = { delta, comment, date, sticker -> viewModel.confirmBalanceAdjust(delta, comment, date, sticker) },
             onConfirmNewBalance = { newBalance, comment, date, sticker -> viewModel.setBalanceTo(newBalance, comment, date, sticker) },
+            onConfirmFromFreeFunds = { amount, comment, date, sticker -> viewModel.topUpFromFreeFunds(adjust.categoryId, amount, sticker, comment, date) },
         )
     }
 
@@ -458,9 +461,11 @@ private fun StickerPicker(selected: String, onSelect: (String) -> Unit) {
 private fun BalanceAdjustDialog(
     state: BalanceAdjustState,
     currency: String,
+    freeFundsBalance: Double? = null,
     onDismiss: () -> Unit,
     onConfirmDelta: (Double, String?, Long, String?) -> Unit,
     onConfirmNewBalance: (Double, String?, Long, String?) -> Unit,
+    onConfirmFromFreeFunds: ((Double, String?, Long, String?) -> Unit)? = null,
 ) {
     var mode by remember { mutableStateOf(0) } // 0 = delta, 1 = set final
     var amountText by remember { mutableStateOf("") }
@@ -469,6 +474,7 @@ private fun BalanceAdjustDialog(
     var commentText by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(System.currentTimeMillis()) }
     var sticker by remember { mutableStateOf(AdjustmentStickers.replenish.first()) }
+    var fromFreeFunds by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -505,6 +511,15 @@ private fun BalanceAdjustDialog(
                         Text("Стикер пополнения:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(4.dp))
                         StickerPicker(selected = sticker, onSelect = { sticker = it })
+                        if (onConfirmFromFreeFunds != null && freeFundsBalance != null) {
+                            Spacer(Modifier.height(4.dp))
+                            FilterChip(
+                                selected = fromFreeFunds,
+                                onClick = { fromFreeFunds = !fromFreeFunds },
+                                label = { Text("💵 Из свободных (${Formatters.money(freeFundsBalance, currency)})", style = MaterialTheme.typography.labelSmall) }
+                            )
+                            if (fromFreeFunds) Text("Будет перевод из 💵 Свободные средства", style = MaterialTheme.typography.labelSmall, color = PayColors.income)
+                        }
                     }
                     val parsed = com.paysplit.app.ui.components.parseMoney(amountText)
                     if (parsed != null && parsed > 0) {
@@ -531,6 +546,15 @@ private fun BalanceAdjustDialog(
                             Text("Стикер пополнения:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(4.dp))
                             StickerPicker(selected = sticker, onSelect = { sticker = it })
+                            if (onConfirmFromFreeFunds != null && freeFundsBalance != null) {
+                                Spacer(Modifier.height(4.dp))
+                                FilterChip(
+                                    selected = fromFreeFunds,
+                                    onClick = { fromFreeFunds = !fromFreeFunds },
+                                    label = { Text("💵 Из свободных (${Formatters.money(freeFundsBalance, currency)})", style = MaterialTheme.typography.labelSmall) }
+                                )
+                                if (fromFreeFunds) Text("Будет перевод из 💵 Свободные средства", style = MaterialTheme.typography.labelSmall, color = PayColors.income)
+                            }
                         }
                         androidx.compose.material3.Surface(color = if (delta >= 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) {
                             Column(Modifier.padding(8.dp)) {
@@ -570,10 +594,23 @@ private fun BalanceAdjustDialog(
                 onClick = {
                     if (mode == 0) {
                         val amount = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
-                        if (amount > 0) onConfirmDelta(if (isIncrease) amount else -amount, commentText, date, if (isIncrease) sticker else null)
+                        if (amount > 0) {
+                            if (fromFreeFunds && isIncrease && onConfirmFromFreeFunds != null) {
+                                onConfirmFromFreeFunds(amount, commentText, date, sticker)
+                            } else {
+                                onConfirmDelta(if (isIncrease) amount else -amount, commentText, date, if (isIncrease) sticker else null)
+                            }
+                        }
                     } else {
                         val nb = com.paysplit.app.ui.components.parseMoney(newBalanceText)
-                        if (nb != null) onConfirmNewBalance(nb, commentText, date, if ((nb - state.currentBalance) > 0) sticker else null)
+                        if (nb != null) {
+                            val delta = nb - state.currentBalance
+                            if (fromFreeFunds && delta > 0 && onConfirmFromFreeFunds != null) {
+                                onConfirmFromFreeFunds(delta, commentText, date, sticker)
+                            } else {
+                                onConfirmNewBalance(nb, commentText, date, if ((nb - state.currentBalance) > 0) sticker else null)
+                            }
+                        }
                     }
                 },
                 enabled = canSave

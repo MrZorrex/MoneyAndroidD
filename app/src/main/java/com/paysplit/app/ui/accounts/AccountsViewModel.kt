@@ -202,17 +202,18 @@ class AccountsViewModel(private val repository: PaySplitRepository) : ViewModel(
         confirmBalanceAdjust(delta, comment, date, sticker)
     }
 
-    /** Пополнение счёта из свободных средств — положительная коррекция. */
+    /** Пополнение счёта из свободных средств — перевод из 💵 Свободные средства. */
     fun topUpFromFreeFunds(targetCategoryId: Long, amount: Double, sticker: String?, comment: String?, date: Long = System.currentTimeMillis()) {
-        val catName = state.value.items.firstOrNull { it.category.id == targetCategoryId }?.category?.name ?: "Счёт"
         viewModelScope.launch {
-            repository.addAdjustment(
-                BalanceAdjustmentEntity(
-                    categoryId = targetCategoryId,
+            val freeFunds = repository.ensureFreeFundsCategory()
+            if (freeFunds.id == targetCategoryId) return@launch
+            repository.addTransfer(
+                com.paysplit.app.data.model.TransferEntity(
+                    fromCategoryId = freeFunds.id,
+                    toCategoryId = targetCategoryId,
                     amount = amount,
                     date = date,
-                    comment = (comment?.trim()?.takeIf { it.isNotBlank() } ?: "Пополнение из свободных средств"),
-                    sticker = sticker,
+                    comment = (comment?.trim()?.takeIf { it.isNotBlank() } ?: "Пополнение из свободных средств") + (sticker?.let { " $it" } ?: ""),
                 )
             )
         }

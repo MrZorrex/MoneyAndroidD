@@ -33,6 +33,7 @@ data class CategoryDetailUiState(
     val categoryIcon: String = "🗂️",
     /** Другие активные счета: идентификатор и название. */
     val otherCategories: List<Pair<Long, String>> = emptyList(),
+    val freeFundsBalance: Double = 0.0,
     val currency: String = "₽",
 )
 
@@ -82,6 +83,8 @@ class CategoryDetailViewModel(
             )
         }
 
+        val freeFundsBal = BalanceCalculator.compute(data, monthStart, monthEnd)
+            .firstOrNull { it.category.name.contains("Свобод") || it.category.icon == "💵" }?.balance ?: 0.0
         CategoryDetailUiState(
             loading = false,
             deleted = false,
@@ -97,6 +100,7 @@ class CategoryDetailViewModel(
             monthlyBalance = monthlyBalance,
             monthlyStats = monthlyStats,
             monthLabels = months.map { DateUtils.formatMonthShort(it) },
+            freeFundsBalance = freeFundsBal,
             currency = data.settings.currency,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CategoryDetailUiState())
@@ -175,6 +179,23 @@ class CategoryDetailViewModel(
                     date = System.currentTimeMillis(),
                     comment = "Пополнение счёта",
                 ),
+            )
+        }
+    }
+
+    /** Пополнение из свободных средств — перевод из 💵 Свободные средства. */
+    fun topUpFromFreeFunds(amount: Double, sticker: String?, comment: String?, date: Long = System.currentTimeMillis()) {
+        viewModelScope.launch {
+            val freeFunds = repository.ensureFreeFundsCategory()
+            if (freeFunds.id == categoryId) return@launch
+            repository.addTransfer(
+                TransferEntity(
+                    fromCategoryId = freeFunds.id,
+                    toCategoryId = categoryId,
+                    amount = amount,
+                    date = date,
+                    comment = (comment?.trim()?.takeIf { it.isNotBlank() } ?: "Пополнение из свободных средств") + (sticker?.let { " $it" } ?: ""),
+                )
             )
         }
     }

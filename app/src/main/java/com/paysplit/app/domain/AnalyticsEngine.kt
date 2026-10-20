@@ -69,12 +69,10 @@ object AnalyticsEngine {
         val months = buildMonthList(from, to).map { ym ->
             val mStart = DateUtils.millisOf(ym.atDay(1))
             val mEnd = DateUtils.millisOf(ym.atEndOfMonth()) + 86_400_000L - 1
-            val adjIncome = data.adjustments.filter { it.date in mStart..mEnd && it.amount > 0 }.sumOf { it.amount }
-            val adjExpense = data.adjustments.filter { it.date in mStart..mEnd && it.amount < 0 }.sumOf { -it.amount }
             MonthStat(
                 yearMonth = ym,
-                income = distributions.filter { it.date in mStart..mEnd }.sumOf { it.amount } + adjIncome,
-                expense = expenses.filter { it.date in mStart..mEnd }.sumOf { it.amount } + adjExpense,
+                income = data.incomes.filter { it.date in mStart..mEnd }.sumOf { it.amount },
+                expense = expenses.filter { it.date in mStart..mEnd }.sumOf { it.amount },
             )
         }
 

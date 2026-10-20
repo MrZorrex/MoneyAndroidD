@@ -148,12 +148,8 @@ object BalanceCalculator {
         }
     }
 
-    /** Общий баланс по всем счетам (доходы + коррекции - расходы за всё время). */
-    fun totalBalance(data: AppData): Double {
-        val income = data.distributions.sumOf { it.amount } + data.transfers.sumOf { it.amount } + data.adjustments.filter { it.amount > 0 }.sumOf { it.amount }
-        val expense = data.expenses.sumOf { it.amount } + data.transfers.sumOf { it.amount } + data.adjustments.filter { it.amount < 0 }.sumOf { -it.amount }
-        return income - expense
-    }
+    /** Общий баланс — сумма всех поступлений (по требованию: все доходы). */
+    fun totalBalance(data: AppData): Double = data.incomes.sumOf { it.amount }
 
     /** Сумма, распределённая по счетам за месяц. */
     fun allocatedThisMonth(data: AppData, monthStart: Long, monthEnd: Long): Double =

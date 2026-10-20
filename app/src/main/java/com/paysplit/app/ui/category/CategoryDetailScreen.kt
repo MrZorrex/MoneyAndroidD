@@ -239,9 +239,11 @@ fun CategoryDetailScreen(
             categoryName = state.categoryName,
             icon = state.categoryIcon,
             currency = state.currency,
+            freeFundsBalance = state.freeFundsBalance.takeIf { it > 0.5 },
             onDismiss = { showAdjustDialog = false },
             onConfirmDelta = { delta, comment, date, sticker -> viewModel.adjustBalance(delta, comment, date, sticker); showAdjustDialog = false },
             onConfirmNewBalance = { newBalance, comment, date, sticker -> viewModel.setBalanceTo(newBalance, comment, state.balance?.balance ?: 0.0, date, sticker); showAdjustDialog = false },
+            onConfirmFromFreeFunds = { amount, comment, date, sticker -> viewModel.topUpFromFreeFunds(amount, sticker, comment, date); showAdjustDialog = false },
         )
     }
     val editingCategory = state.balance?.category
@@ -389,9 +391,11 @@ private fun BalanceCorrectDialog(
     categoryName: String,
     icon: String,
     currency: String,
+    freeFundsBalance: Double? = null,
     onDismiss: () -> Unit,
     onConfirmDelta: (Double, String?, Long, String?) -> Unit,
     onConfirmNewBalance: (Double, String?, Long, String?) -> Unit,
+    onConfirmFromFreeFunds: ((Double, String?, Long, String?) -> Unit)? = null,
 ) {
     var mode by remember { mutableStateOf(0) }
     var amountText by remember { mutableStateOf("") }
@@ -400,6 +404,7 @@ private fun BalanceCorrectDialog(
     var commentText by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(System.currentTimeMillis()) }
     var sticker by remember { mutableStateOf(DetailStickers.list.first()) }
+    var fromFreeFunds by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -435,6 +440,15 @@ private fun BalanceCorrectDialog(
                         Spacer(Modifier.height(4.dp))
                         Text("Стикер пополнения:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         DetailStickerPicker(selected = sticker, onSelect = { sticker = it })
+                        if (onConfirmFromFreeFunds != null && freeFundsBalance != null) {
+                            Spacer(Modifier.height(4.dp))
+                            FilterChip(
+                                selected = fromFreeFunds,
+                                onClick = { fromFreeFunds = !fromFreeFunds },
+                                label = { Text("💵 Из свободных (${Formatters.money(freeFundsBalance, currency)})", style = MaterialTheme.typography.labelSmall) }
+                            )
+                            if (fromFreeFunds) Text("Будет перевод из 💵 Свободные средства", style = MaterialTheme.typography.labelSmall, color = PayColors.income)
+                        }
                     }
                     val parsed = com.paysplit.app.ui.components.parseMoney(amountText)
                     if (parsed != null && parsed > 0) {
@@ -453,6 +467,15 @@ private fun BalanceCorrectDialog(
                             Spacer(Modifier.height(4.dp))
                             Text("Стикер пополнения:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             DetailStickerPicker(selected = sticker, onSelect = { sticker = it })
+                            if (onConfirmFromFreeFunds != null && freeFundsBalance != null) {
+                                Spacer(Modifier.height(4.dp))
+                                FilterChip(
+                                    selected = fromFreeFunds,
+                                    onClick = { fromFreeFunds = !fromFreeFunds },
+                                    label = { Text("💵 Из свободных (${Formatters.money(freeFundsBalance, currency)})", style = MaterialTheme.typography.labelSmall) }
+                                )
+                                if (fromFreeFunds) Text("Будет перевод из 💵 Свободные средства", style = MaterialTheme.typography.labelSmall, color = PayColors.income)
+                            }
                         }
                         androidx.compose.material3.Surface(color = if (delta >= 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) {
                             Column(Modifier.padding(8.dp)) {
@@ -480,10 +503,23 @@ private fun BalanceCorrectDialog(
             Button(onClick = {
                 if (mode == 0) {
                     val a = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
-                    if (a > 0) onConfirmDelta(if (isIncrease) a else -a, commentText, date, if (isIncrease) sticker else null)
+                    if (a > 0) {
+                        if (fromFreeFunds && isIncrease && onConfirmFromFreeFunds != null) {
+                            onConfirmFromFreeFunds(a, commentText, date, sticker)
+                        } else {
+                            onConfirmDelta(if (isIncrease) a else -a, commentText, date, if (isIncrease) sticker else null)
+                        }
+                    }
                 } else {
                     val nb = com.paysplit.app.ui.components.parseMoney(newBalanceText)
-                    if (nb != null) onConfirmNewBalance(nb, commentText, date, if ((nb - currentBalance) > 0) sticker else null)
+                    if (nb != null) {
+                        val delta = nb - currentBalance
+                        if (fromFreeFunds && delta > 0 && onConfirmFromFreeFunds != null) {
+                            onConfirmFromFreeFunds(delta, commentText, date, sticker)
+                        } else {
+                            onConfirmNewBalance(nb, commentText, date, if ((nb - currentBalance) > 0) sticker else null)
+                        }
+                    }
                 }
             }, enabled = canSave) { Text("Сохранить", style = MaterialTheme.typography.labelMedium) }
         },
