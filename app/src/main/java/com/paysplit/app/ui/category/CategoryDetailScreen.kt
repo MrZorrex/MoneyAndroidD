@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
@@ -362,13 +365,13 @@ private object DetailStickers {
 
 @Composable
 private fun DetailStickerPicker(selected: String, onSelect: (String) -> Unit) {
-    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 44.dp),
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 44.dp),
         modifier = Modifier.fillMaxWidth().heightIn(max = 120.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        androidx.compose.foundation.lazy.grid.items(DetailStickers.list) { s ->
+        gridItems(DetailStickers.list) { s ->
             val isSel = s == selected
             androidx.compose.material3.Surface(
                 onClick = { onSelect(s) },

@@ -18,6 +18,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -428,15 +431,15 @@ object AdjustmentStickers {
 
 @Composable
 private fun StickerPicker(selected: String, onSelect: (String) -> Unit) {
-    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 44.dp),
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 44.dp),
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = 120.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        androidx.compose.foundation.lazy.grid.items(AdjustmentStickers.replenish) { sticker ->
+        gridItems(AdjustmentStickers.replenish) { sticker ->
             val isSelected = selected == sticker
             Surface(
                 onClick = { onSelect(sticker) },
