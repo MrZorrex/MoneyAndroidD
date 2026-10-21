@@ -258,6 +258,7 @@ private fun MonthHeaderCompact(state: DashboardUiState) {
 
 @Composable
 private fun SummaryCompactCard(state: DashboardUiState) {
+    val monthNet = state.monthIncome - state.monthExpense
     PayCard {
         SectionHeader(title = "Сводка за месяц", subtitle = state.monthLabel)
         Spacer(Modifier.height(8.dp))
@@ -265,7 +266,7 @@ private fun SummaryCompactCard(state: DashboardUiState) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 InfoRow(label = "Доходы", value = Formatters.money(state.monthIncome, state.currency), valueColor = PayColors.income)
                 InfoRow(label = "Расходы", value = Formatters.money(state.monthExpense, state.currency), valueColor = PayColors.expense)
-                InfoRow(label = "Остаток", value = Formatters.money(state.monthNet, state.currency), valueColor = if (state.monthNet >= 0) PayColors.income else PayColors.expense)
+                InfoRow(label = "Остаток", value = Formatters.money(monthNet, state.currency), valueColor = if (monthNet >= 0) PayColors.income else PayColors.expense)
             }
             if (state.expenseByCategory.isNotEmpty()) {
                 BoxWithConstraints(modifier = Modifier.weight(1f).padding(start = 4.dp)) {

@@ -99,7 +99,6 @@ fun OnboardingScreen(
                     if (state.step == state.totalSteps - 1) viewModel.finish()
                     else viewModel.next()
                 },
-                enabled = state.canProceed,
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
