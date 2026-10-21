@@ -11,7 +11,9 @@ android {
 
     defaultConfig {
         applicationId = "com.paysplit.app"
-        minSdk = 35 // Android 15 и выше (приложение собирается под Android 16)
+        // Поддержка старых устройств (Android 7.0+). compile/target остаются 36 для новых фич,
+        // min 24 покрывает ~98% активных устройств без вреда стабильности.
+        minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
@@ -48,6 +50,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Desugaring java.time (YearMonth и т.д.) для API <26 — безопасно, без падения на Android 7-10.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -114,6 +118,9 @@ dependencies {
 
     // --- Графики Vico ---
     implementation(libs.vico.compose.m3)
+
+    // --- Desugaring runtime (не увеличивает APK заметно: ~200KB) ---
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     // --- Тесты ---
     testImplementation(libs.junit)

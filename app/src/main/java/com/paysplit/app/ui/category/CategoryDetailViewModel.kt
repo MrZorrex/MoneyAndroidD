@@ -11,8 +11,10 @@ import com.paysplit.app.domain.AnalyticsEngine
 import com.paysplit.app.domain.BalanceCalculator
 import com.paysplit.app.domain.TransactionBuilder
 import com.paysplit.app.util.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -103,7 +105,7 @@ class CategoryDetailViewModel(
             freeFundsBalance = freeFundsBal,
             currency = data.settings.currency,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CategoryDetailUiState())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CategoryDetailUiState())
 
     fun deleteCategory() {
         viewModelScope.launch { repository.deleteCategory(categoryId) }

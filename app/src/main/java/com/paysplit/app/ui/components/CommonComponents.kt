@@ -118,7 +118,7 @@ fun CategoryAvatar(
     }
 }
 
-/** Анимированный прогресс-бар — компактный. */
+/** Анимированный прогресс-бар — оптимизирован для плавности на слабых устройствах. */
 @Composable
 fun AnimatedProgress(
     progress: Float,
@@ -127,9 +127,12 @@ fun AnimatedProgress(
     trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     height: Int = 5,
 ) {
+    // На очень старых устройствах длинная анимация даёт рывки — сокращаем до 220мс
+    // и используем быстрый ease, без лишних рекомпозиций.
+    val clamped = progress.coerceIn(0f, 1f)
     val animated by animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 500),
+        targetValue = clamped,
+        animationSpec = tween(durationMillis = 220),
         label = "progress",
     )
     LinearProgressIndicator(
@@ -144,19 +147,14 @@ fun AnimatedProgress(
     )
 }
 
-/** Точка-индикатор статуса категории — компактный. */
+/** Точка-индикатор статуса категории — мгновенно, без анимации для экономии кадра. */
 @Composable
 fun StatusDot(status: CategoryStatus, modifier: Modifier = Modifier) {
-    val color by animateColorAsState(
-        targetValue = PayColors.ofStatus(status),
-        animationSpec = tween(300),
-        label = "status",
-    )
     Box(
         modifier = modifier
             .size(8.dp)
             .clip(CircleShape)
-            .background(color),
+            .background(PayColors.ofStatus(status)),
     )
 }
 

@@ -9,8 +9,10 @@ import com.paysplit.app.domain.AnalyticsEngine
 import com.paysplit.app.domain.BalanceCalculator
 import com.paysplit.app.domain.TransactionBuilder
 import com.paysplit.app.util.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -57,7 +59,7 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
             currency = data.settings.currency,
             freeAmount = freeAmount,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
 
     /** Сохранение настроек счёта (в т.ч. суммы на месяц) прямо с главной. */
     fun saveCategory(updated: com.paysplit.app.data.model.CategoryEntity) {

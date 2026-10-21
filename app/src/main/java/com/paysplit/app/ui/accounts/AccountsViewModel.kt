@@ -9,11 +9,13 @@ import com.paysplit.app.data.repository.PaySplitRepository
 import com.paysplit.app.domain.BalanceCalculator
 import com.paysplit.app.domain.SavingsPlanner
 import com.paysplit.app.util.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -67,7 +69,7 @@ class AccountsViewModel(private val repository: PaySplitRepository) : ViewModel(
             currency = data.settings.currency,
             totalBalance = BalanceCalculator.totalBalance(data),
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountsUiState())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountsUiState())
 
     val editorState: StateFlow<AccountEditorState> = editor
     val balanceAdjustState: StateFlow<BalanceAdjustState> = adjustState

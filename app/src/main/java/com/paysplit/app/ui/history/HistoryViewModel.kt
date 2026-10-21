@@ -9,10 +9,12 @@ import com.paysplit.app.data.model.UiTransaction
 import com.paysplit.app.data.repository.PaySplitRepository
 import com.paysplit.app.domain.TransactionBuilder
 import com.paysplit.app.util.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -74,7 +76,7 @@ class HistoryViewModel(private val repository: PaySplitRepository) : ViewModel()
                 balance = income - expense,
                 currency = data.settings.currency,
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
     fun setPeriod(period: HistoryPeriod) {
         filters.update {

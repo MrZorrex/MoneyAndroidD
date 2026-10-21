@@ -176,12 +176,13 @@ fun HistoryScreen(
                 }
             } else {
                 state.groups.forEach { group ->
-                    item(key = "day-${group.dayStart}") {
+                    item(key = "day-${group.dayStart}", contentType = "dayHeader") {
                         DayHeader(group = group, currency = state.currency)
                     }
                     items(
                         items = group.transactions,
                         key = { "${it.type}-${it.id}-${it.date}" },
+                        contentType = { "txRow" },
                     ) { transaction ->
                         HistoryRow(
                             transaction = transaction,

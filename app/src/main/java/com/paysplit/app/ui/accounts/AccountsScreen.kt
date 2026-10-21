@@ -138,11 +138,11 @@ fun AccountsScreen(
             }
 
             if (state.items.isEmpty()) {
-                item {
+                item(key = "empty", contentType = "empty") {
                     EmptyState(icon = "🗂️", title = "Счетов нет", message = "Нажмите «Новый счёт» или сбросьте по шаблону")
                 }
             } else {
-                items(state.items, key = { it.category.id }) { item ->
+                items(state.items, key = { it.category.id }, contentType = { "accountCard" }) { item ->
                     CompactAccountCard(
                         item = item,
                         currency = state.currency,

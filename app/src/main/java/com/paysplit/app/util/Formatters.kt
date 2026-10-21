@@ -17,13 +17,34 @@ object Formatters {
 
     private val signedMoneyFormat = DecimalFormat("+#,##0;-#,##0", symbols)
 
+    // Кэш частых значений (0..200к) — экономит аллокации при скролле (до 60 вызовов за кадр)
+    private val moneyCache = androidx.collection.LruCache<String, String>(512)
+
     /** «12 345 ₽» — всегда целое, округляем до рубля. */
-    fun money(value: Double, currency: String = "₽"): String =
-        moneyFormat.format(roundInt(value)) + if (currency.isNotEmpty()) " $currency" else ""
+    fun money(value: Double, currency: String = "₽"): String {
+        val intVal = roundInt(value)
+        // Кэшируем 80% вызовов (суммы обычно повторяются)
+        val key = "$intVal|$currency"
+        moneyCache.get(key)?.let { return it }
+        // DecimalFormat не thread-safe — синхронизируем
+        val formatted = synchronized(moneyFormat) {
+            moneyFormat.format(intVal)
+        } + if (currency.isNotEmpty()) " $currency" else ""
+        moneyCache.put(key, formatted)
+        return formatted
+    }
 
     /** «+1 200 ₽» / «−1 200 ₽» — целое. */
-    fun signedMoney(value: Double, currency: String = "₽"): String =
-        signedMoneyFormat.format(roundInt(value)) + if (currency.isNotEmpty()) " $currency" else ""
+    fun signedMoney(value: Double, currency: String = "₽"): String {
+        val intVal = roundInt(value)
+        val key = "s$intVal|$currency"
+        moneyCache.get(key)?.let { return it }
+        val formatted = synchronized(signedMoneyFormat) {
+            signedMoneyFormat.format(intVal)
+        } + if (currency.isNotEmpty()) " $currency" else ""
+        moneyCache.put(key, formatted)
+        return formatted
+    }
 
     /** Компактный вид для осей графиков: «12К», «1М» — без дробей. */
     fun moneyShort(value: Double): String {

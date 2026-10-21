@@ -3,6 +3,7 @@
 agp = "9.3.0"
 kotlin = "2.3.21"
 ksp = "2.3.12"
+desugar = "2.1.4"
 
 # --- AndroidX ---
 coreKtx = "1.16.0"
@@ -73,6 +74,9 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 
 # --- Графики (Vico) ---
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
+
+# --- Desugaring (поддержка java.time на API <26) ---
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
 
 # --- Тесты ---
 junit = { group = "junit", name = "junit", version.ref = "junit" }

@@ -8,11 +8,13 @@ import com.paysplit.app.data.repository.PaySplitRepository
 import com.paysplit.app.domain.BalanceCalculator
 import com.paysplit.app.domain.SavingsPlanner
 import com.paysplit.app.util.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -56,7 +58,7 @@ class CategoriesViewModel(private val repository: PaySplitRepository) : ViewMode
             totalPlan = data.totalMonthlyPlan,
             currency = data.settings.currency,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CategoriesUiState())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CategoriesUiState())
 
     val editorState: StateFlow<CategoryEditorState> = editor
 
