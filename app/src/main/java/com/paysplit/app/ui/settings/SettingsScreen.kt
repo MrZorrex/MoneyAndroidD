@@ -83,17 +83,6 @@ fun SettingsScreen(
     var deleteConfirmText by remember { mutableStateOf("") }
     var fullResetConfirmText by remember { mutableStateOf("") }
     var pendingRestart by remember { mutableStateOf(false) }
-    // Локальный текст дохода: позволяет вводить дробную часть с запятой,
-    // не теряя введённые символы при переформатировании значения из базы.
-    var incomeText by remember {
-        mutableStateOf(formatSettingsAmount(state.settings.expectedMonthlyIncome))
-    }
-    LaunchedEffect(state.settings.expectedMonthlyIncome) {
-        val parsed = com.paysplit.app.ui.components.parseMoney(incomeText)
-        if (parsed == null || parsed != state.settings.expectedMonthlyIncome) {
-            incomeText = formatSettingsAmount(state.settings.expectedMonthlyIncome)
-        }
-    }
 
     LaunchedEffect(state.message) {
         val message = state.message ?: return@LaunchedEffect
@@ -133,50 +122,15 @@ fun SettingsScreen(
         ) {
             Spacer(Modifier.height(8.dp))
 
-            // --- Профиль ---
-            SettingsSection(title = "👤 Профиль") {
+            // --- Распределение зарплаты ---
+            SettingsSection(title = "💡 Распределение зарплаты") {
                 Text(
-                    text = "Доход в месяц, ${state.settings.currency}",
-                    style = MaterialTheme.typography.labelLarge,
+                    text = "Каждое поступление распределяется по планам ваших счетов. " +
+                        "Если сумма больше планов — излишек попадает в счёт 💵 Свободные средства. " +
+                        "Оттуда его можно распределить по счетам кнопкой «Распределить» на главном экране или через пополнение из свободных в разделе «Счета».",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(6.dp))
-                MoneyInputField(
-                    value = incomeText,
-                    onValueChange = { text ->
-                        incomeText = text
-                        com.paysplit.app.ui.components.parseMoney(text)?.let {
-                            viewModel.setExpectedIncome(it)
-                        }
-                    },
-                    label = "Примерный доход",
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Сколько раз приходит зарплата в месяц",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.setPaydayCount(state.settings.paydayCount - 1)
-                        },
-                        enabled = state.settings.paydayCount > 1,
-                    ) { Text("−") }
-                    Text(
-                        text = state.settings.paydayCount.toString(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.setPaydayCount(state.settings.paydayCount + 1)
-                        },
-                        enabled = state.settings.paydayCount < 10,
-                    ) { Text("+") }
-                }
             }
 
             // --- Безопасность ---

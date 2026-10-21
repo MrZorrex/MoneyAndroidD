@@ -9,21 +9,15 @@ import com.paysplit.app.domain.AnalyticsEngine
 import com.paysplit.app.domain.BalanceCalculator
 import com.paysplit.app.domain.TransactionBuilder
 import com.paysplit.app.util.DateUtils
-import com.paysplit.app.util.Formatters
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.math.max
 
 data class DashboardUiState(
     val loading: Boolean = true,
     val monthLabel: String = "",
-    val expectedIncome: Double = 0.0,
-    val receivedThisMonth: Double = 0.0,
-    val incomeCount: Int = 0,
-    val paydayCount: Int = 2,
     val totalBalance: Double = 0.0,
     val monthIncome: Double = 0.0,
     val monthExpense: Double = 0.0,
@@ -31,14 +25,8 @@ data class DashboardUiState(
     val expenseByCategory: List<AnalyticsEngine.CategoryExpense> = emptyList(),
     val recentTransactions: List<UiTransaction> = emptyList(),
     val currency: String = "₽",
-) {
-    /** Прогресс получения зарплаты за месяц (0..1). */
-    val incomeProgress: Float
-        get() = if (expectedIncome <= 0.0) 0f
-        else (receivedThisMonth / expectedIncome).coerceIn(0.0, 1.0).toFloat()
-
-    val monthNet: Double get() = monthIncome - monthExpense
-}
+    val freeAmount: Double = 0.0,
+)
 
 class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel() {
 
@@ -52,13 +40,14 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
 
         val stats = AnalyticsEngine.compute(data, monthStart, monthEnd)
 
+        // Свободные средства — баланс категории 💵
+        val freeAmount = balances.firstOrNull {
+            it.category.name == "Свободные средства" || it.category.icon == "💵"
+        }?.balance ?: 0.0
+
         DashboardUiState(
             loading = false,
             monthLabel = DateUtils.formatMonth(DateUtils.yearMonth(now)),
-            expectedIncome = data.settings.expectedMonthlyIncome,
-            receivedThisMonth = BalanceCalculator.incomeThisMonth(data, monthStart, monthEnd),
-            incomeCount = BalanceCalculator.incomeCountThisMonth(data, monthStart, monthEnd),
-            paydayCount = data.settings.paydayCount,
             totalBalance = BalanceCalculator.totalBalance(data),
             monthIncome = stats.totalIncome,
             monthExpense = stats.totalExpense,
@@ -66,22 +55,9 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
             expenseByCategory = stats.byCategory,
             recentTransactions = TransactionBuilder.build(data, monthStart, monthEnd).take(5),
             currency = data.settings.currency,
+            freeAmount = freeAmount,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
-
-    /** Форматирование для подзаголовка прогресса. */
-    fun progressSubtitle(state: DashboardUiState): String {
-        val received = Formatters.money(state.receivedThisMonth, state.currency)
-        val plan = if (state.expectedIncome > 0) {
-            Formatters.money(state.expectedIncome, state.currency)
-        } else {
-            "~" + Formatters.money(
-                max(0.0, state.balances.sumOf { it.category.monthlyPlan }),
-                state.currency,
-            )
-        }
-        return "Получено " + received + " из " + plan
-    }
 
     /** Сохранение настроек счёта (в т.ч. суммы на месяц) прямо с главной. */
     fun saveCategory(updated: com.paysplit.app.data.model.CategoryEntity) {
@@ -100,6 +76,27 @@ class DashboardViewModel(private val repository: PaySplitRepository) : ViewModel
                     comment = "Перевод между счетами",
                 ),
             )
+        }
+    }
+
+    /** Распределение свободных средств по счетам — переводы из 💵 Свободные средства. */
+    fun distributeFreeFunds(allocations: List<Pair<Long, Double>>) {
+        viewModelScope.launch {
+            val freeFunds = repository.ensureFreeFundsCategory()
+            val now = System.currentTimeMillis()
+            allocations.forEach { (catId, amount) ->
+                if (amount > 0.5 && catId != freeFunds.id) {
+                    repository.addTransfer(
+                        com.paysplit.app.data.model.TransferEntity(
+                            fromCategoryId = freeFunds.id,
+                            toCategoryId = catId,
+                            amount = amount,
+                            date = now,
+                            comment = "Распределение свободных средств",
+                        )
+                    )
+                }
+            }
         }
     }
 }

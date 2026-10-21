@@ -34,8 +34,8 @@ import com.paysplit.app.ui.components.SectionHeader
 import com.paysplit.app.util.Formatters
 
 /**
- * ЭКРАН 1 — Онбординг (4 шага):
- * приветствие → примерный доход → количество выплат → шаблон категорий.
+ * ЭКРАН 1 — Онбординг (2 шага):
+ * приветствие → шаблон категорий.
  */
 @Composable
 fun OnboardingScreen(
@@ -79,17 +79,7 @@ fun OnboardingScreen(
 
         when (state.step) {
             0 -> WelcomeStep()
-            1 -> IncomeStep(
-                incomeText = state.incomeText,
-                onIncomeChange = viewModel::setIncome,
-            )
-
-            2 -> PaydayStep(
-                paydayText = state.paydayText,
-                onPaydayChange = viewModel::setPaydays,
-            )
-
-            3 -> TemplateStep(
+            1 -> TemplateStep(
                 useTemplate = state.useTemplate,
                 onUseTemplateChange = viewModel::setUseTemplate,
             )

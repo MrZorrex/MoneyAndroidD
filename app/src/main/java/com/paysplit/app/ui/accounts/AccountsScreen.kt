@@ -113,16 +113,12 @@ fun AccountsScreen(
         ) {
             item {
                 Spacer(Modifier.height(4.dp))
-                // Compact summary card
+                // Compact summary card — только планы и баланс
                 PayCard {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Планы", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(Formatters.money(state.totalPlan, state.currency), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        }
-                        Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-                            Text("Доход", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(Formatters.money(state.expectedIncome, state.currency), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                         }
                         Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
                             Text("Баланс", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -133,21 +129,11 @@ fun AccountsScreen(
                                 color = if (state.totalBalance >= 0) PayColors.income else PayColors.expense,
                             )
                         }
+                        Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+                            Text("Счетов", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${state.items.count { it.category.isActive }} / ${state.items.size}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        }
                     }
-                    Spacer(Modifier.height(6.dp))
-                    AnimatedProgress(
-                        progress = if (state.totalPlan > 0) (state.expectedIncome / state.totalPlan).toFloat().coerceIn(0f, 1f) else 0f,
-                        height = 5,
-                        color = if (state.difference >= 0) PayColors.income else PayColors.expense,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = if (state.difference >= 0) "✓ Свободно ${Formatters.money(state.difference, state.currency)}" else "⚠ Не хватает ${Formatters.money(-state.difference, state.currency)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (state.difference >= 0) PayColors.income else PayColors.expense,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
             }
 
@@ -282,11 +268,16 @@ private fun CompactAccountCard(
                         Text(" 🏦", style = MaterialTheme.typography.labelSmall)
                     }
                 }
+                val percent = (item.monthProgress * 100).toInt()
+                val remainingText = if (item.remainingToPlan >= -0.005) {
+                    "${Formatters.money(item.remainingToPlan.coerceAtLeast(0.0), currency)} осталось"
+                } else {
+                    "${Formatters.money(-item.remainingToPlan, currency)} превышено"
+                }
                 Text(
                     text = buildString {
                         append(if (item.category.type == CategoryType.SAVINGS) "Накоп. " else "Расх. ")
-                        append("план ${Formatters.money(item.category.monthlyPlan, currency)}")
-                        append(" · осталось ${Formatters.money(item.remainingToPlan, currency)}")
+                        append("план ${Formatters.money(item.category.monthlyPlan, currency)} · $percent% · $remainingText")
                         if (item.category.targetAmount != null) append(" · цель ${Formatters.money(item.category.targetAmount, currency)}")
                     },
                     style = MaterialTheme.typography.labelSmall,
@@ -313,7 +304,7 @@ private fun CompactAccountCard(
             }
         }
         Spacer(Modifier.height(6.dp))
-        AnimatedProgress(progress = item.monthProgress, color = PayColors.ofStatus(item.status), height = 4)
+        AnimatedProgress(progress = item.monthProgress.coerceIn(0f, 1f), color = PayColors.ofStatus(item.status), height = 4)
         Spacer(Modifier.height(6.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             // Compact action buttons

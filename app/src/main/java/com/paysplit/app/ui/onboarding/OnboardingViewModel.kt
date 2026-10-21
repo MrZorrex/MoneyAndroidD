@@ -13,35 +13,15 @@ import kotlinx.coroutines.launch
 
 data class OnboardingUiState(
     val step: Int = 0,
-    val totalSteps: Int = 4,
-    val incomeText: String = "",
-    val paydayText: String = "2",
+    val totalSteps: Int = 2,
     val useTemplate: Boolean = true,
     val finished: Boolean = false,
-) {
-    val income: Double get() = incomeText.replace(',', '.').toDoubleOrNull() ?: 0.0
-    val paydays: Int get() = paydayText.toIntOrNull()?.coerceIn(1, 10) ?: 2
-    val canProceed: Boolean
-        get() = when (step) {
-            0, 3 -> true
-            1 -> income > 0.0
-            2 -> paydayText.toIntOrNull() != null
-            else -> true
-        }
-}
+)
 
 class OnboardingViewModel(private val repository: PaySplitRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(OnboardingUiState())
     val state: StateFlow<OnboardingUiState> = _state.asStateFlow()
-
-    fun setIncome(text: String) = _state.update {
-        it.copy(incomeText = text.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' })
-    }
-
-    fun setPaydays(text: String) = _state.update {
-        it.copy(paydayText = text.filter { ch -> ch.isDigit() }.take(2))
-    }
 
     fun setUseTemplate(value: Boolean) = _state.update { it.copy(useTemplate = value) }
 
@@ -59,8 +39,6 @@ class OnboardingViewModel(private val repository: PaySplitRepository) : ViewMode
             val state = _state.value
             repository.updateSettings { settings: SettingsEntity ->
                 settings.copy(
-                    expectedMonthlyIncome = state.income,
-                    paydayCount = state.paydays,
                     onboardingCompleted = true,
                 )
             }

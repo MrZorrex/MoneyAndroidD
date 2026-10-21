@@ -33,6 +33,9 @@ enum class TxType {
 
     /** Перевод: приход на счёт-получатель. */
     TRANSFER_IN,
+
+    /** Ручная коррекция баланса счёта. */
+    ADJUSTMENT,
 }
 
 /** Период для фильтра истории. */
@@ -52,6 +55,7 @@ enum class TxFilter(val label: String) {
     INCOME("Поступления"),
     EXPENSE("Расходы"),
     TRANSFERS("Переводы"),
+    ADJUSTMENT("Коррекции"),
 }
 
 /** Период для экрана аналитики. */

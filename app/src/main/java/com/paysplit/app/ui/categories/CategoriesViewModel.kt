@@ -21,8 +21,6 @@ import kotlinx.coroutines.launch
 data class CategoriesUiState(
     val items: List<BalanceCalculator.CategoryBalance> = emptyList(),
     val totalPlan: Double = 0.0,
-    val expectedIncome: Double = 0.0,
-    val difference: Double = 0.0,
     val currency: String = "₽",
 )
 
@@ -56,8 +54,6 @@ class CategoriesViewModel(private val repository: PaySplitRepository) : ViewMode
         CategoriesUiState(
             items = items,
             totalPlan = data.totalMonthlyPlan,
-            expectedIncome = data.settings.expectedMonthlyIncome,
-            difference = data.settings.expectedMonthlyIncome - data.totalMonthlyPlan,
             currency = data.settings.currency,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CategoriesUiState())

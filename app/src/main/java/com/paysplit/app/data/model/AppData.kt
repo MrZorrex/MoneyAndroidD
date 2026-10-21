@@ -10,6 +10,7 @@ data class AppData(
     val expenses: List<ExpenseEntity> = emptyList(),
     val distributions: List<DistributionEntity> = emptyList(),
     val transfers: List<TransferEntity> = emptyList(),
+    val adjustments: List<BalanceAdjustmentEntity> = emptyList(),
     val settings: SettingsEntity = SettingsEntity(),
 ) {
     val isOnboardingCompleted: Boolean get() = settings.onboardingCompleted
@@ -37,5 +38,9 @@ data class UiTransaction(
     /** id исходной сущности (IncomeEntity / ExpenseEntity / TransferEntity). */
     val sourceId: Long,
 ) {
-    val isIncoming: Boolean get() = type == TxType.INCOME || type == TxType.TRANSFER_IN
+    val isIncoming: Boolean get() = when (type) {
+        TxType.INCOME, TxType.TRANSFER_IN -> true
+        TxType.ADJUSTMENT -> title.contains("+")
+        else -> false
+    }
 }

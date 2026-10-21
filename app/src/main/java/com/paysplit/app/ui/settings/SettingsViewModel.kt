@@ -45,14 +45,6 @@ class SettingsViewModel(
             SettingsUiState(settings = settings, busy = isBusy, message = msg)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
-    // --- Профиль ---
-
-    fun setExpectedIncome(value: Double) = updateSettings { it.copy(expectedMonthlyIncome = value) }
-
-    fun setPaydayCount(count: Int) = updateSettings {
-        it.copy(paydayCount = count.coerceIn(1, 10))
-    }
-
     // --- Безопасность ---
 
     fun setPin(pin: String?) = updateSettings {

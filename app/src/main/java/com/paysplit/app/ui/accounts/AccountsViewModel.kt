@@ -22,8 +22,6 @@ import kotlinx.coroutines.launch
 data class AccountsUiState(
     val items: List<BalanceCalculator.CategoryBalance> = emptyList(),
     val totalPlan: Double = 0.0,
-    val expectedIncome: Double = 0.0,
-    val difference: Double = 0.0,
     val currency: String = "₽",
     val totalBalance: Double = 0.0,
 )
@@ -66,8 +64,6 @@ class AccountsViewModel(private val repository: PaySplitRepository) : ViewModel(
         AccountsUiState(
             items = items,
             totalPlan = data.totalMonthlyPlan,
-            expectedIncome = data.settings.expectedMonthlyIncome,
-            difference = data.settings.expectedMonthlyIncome - data.totalMonthlyPlan,
             currency = data.settings.currency,
             totalBalance = BalanceCalculator.totalBalance(data),
         )

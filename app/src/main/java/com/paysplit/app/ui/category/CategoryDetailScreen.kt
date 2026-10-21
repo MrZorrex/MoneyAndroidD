@@ -10,16 +10,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -53,6 +59,7 @@ import com.paysplit.app.ui.components.ChipRow
 import com.paysplit.app.ui.components.ConfirmDialog
 import com.paysplit.app.ui.components.EmptyState
 import com.paysplit.app.ui.components.AreaLineChart
+import com.paysplit.app.ui.components.DateField
 import com.paysplit.app.ui.components.MoneyInputField
 import com.paysplit.app.ui.components.MoneyValue
 import com.paysplit.app.ui.components.PayCard
@@ -65,7 +72,7 @@ import com.paysplit.app.util.DateUtils
 import com.paysplit.app.util.Formatters
 
 /**
- * ЭКРАН 5 — Детали счёта (категории).
+ * Детали счёта — компактный интерфейс.
  */
 @Composable
 fun CategoryDetailScreen(
@@ -87,6 +94,7 @@ fun CategoryDetailScreen(
 
     var showExpenseDialog by remember { mutableStateOf(false) }
     var showTopUpDialog by remember { mutableStateOf(false) }
+    var showAdjustDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var transactionToDelete by remember { mutableStateOf<UiTransaction?>(null) }
@@ -99,413 +107,422 @@ fun CategoryDetailScreen(
         topBar = {
             PayTopBar(
                 title = state.categoryName,
-                subtitle = if (state.balance?.category?.type == CategoryType.SAVINGS) {
-                    "Накопительный счёт"
-                } else {
-                    "Расходный счёт"
-                },
+                subtitle = if (state.balance?.category?.type == CategoryType.SAVINGS) "Накопительный" else "Расходный",
                 onBack = onBack,
                 actions = {
-                    TextButton(onClick = { showSettingsDialog = true }) {
-                        Text("⚙️ Настройки")
-                    }
+                    TextButton(onClick = { showSettingsDialog = true }) { Text("⚙️", style = MaterialTheme.typography.labelMedium) }
                 },
             )
         },
     ) { padding ->
         val balance = state.balance
         if (balance == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Счёт не найден",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text("Счёт не найден", style = MaterialTheme.typography.bodyMedium)
             }
             return@Scaffold
         }
 
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
                 PayCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CategoryAvatar(icon = state.categoryIcon, size = 48)
-                        Spacer(Modifier.width(12.dp))
+                        CategoryAvatar(icon = state.categoryIcon, size = 32)
+                        Spacer(Modifier.width(8.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Текущий баланс",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Text("Текущий баланс", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             MoneyValue(
                                 value = balance.balance,
-                                color = if (balance.balance < 0) PayColors.expense
-                                else PayColors.income,
+                                color = if (balance.balance < 0) PayColors.expense else PayColors.income,
                                 currency = state.currency,
+                                style = MaterialTheme.typography.titleMedium,
                             )
                         }
+                        TextButton(onClick = hapticClick { showAdjustDialog = true }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                            Text("⚖️ Коррекция", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
-                    Spacer(Modifier.height(12.dp))
-                    AnimatedProgress(
-                        progress = balance.monthProgress,
-                        color = PayColors.ofStatus(balance.status),
-                        height = 8,
-                    )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
+                    AnimatedProgress(progress = balance.monthProgress, color = PayColors.ofStatus(balance.status), height = 5)
+                    Spacer(Modifier.height(4.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = "Распределено " +
-                                Formatters.money(balance.allocatedThisMonth, state.currency) +
-                                " из " +
-                                Formatters.money(balance.category.monthlyPlan, state.currency),
-                            style = MaterialTheme.typography.labelMedium,
+                            "Распр. ${Formatters.money(balance.allocatedThisMonth, state.currency)} из ${Formatters.money(balance.category.monthlyPlan, state.currency)}",
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
                         )
-                        Spacer(Modifier.weight(1f))
                         Text(
-                            text = if (balance.isOverspend) {
-                                "⚠️ Перерасход " +
-                                    Formatters.money(-balance.balance, state.currency)
-                            } else {
-                                "Осталось " +
-                                    Formatters.money(balance.remainingToPlan, state.currency)
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (balance.isOverspend) PayColors.expense
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            if (balance.isOverspend) "⚠ ${Formatters.money(-balance.balance, state.currency)}" else "Ост. ${Formatters.money(balance.remainingToPlan, state.currency)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (balance.isOverspend) PayColors.expense else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatTile(
-                        title = "Поступления",
-                        value = Formatters.money(
-                            state.monthlyStats.lastOrNull()?.income ?: 0.0,
-                            state.currency,
-                        ),
-                        modifier = Modifier.weight(1f),
-                        valueColor = PayColors.income,
-                    )
-                    StatTile(
-                        title = "Расходы",
-                        value = Formatters.money(
-                            state.monthlyStats.lastOrNull()?.expense ?: 0.0,
-                            state.currency,
-                        ),
-                        modifier = Modifier.weight(1f),
-                        valueColor = PayColors.expense,
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    StatTile(title = "Поступления", value = Formatters.money(state.monthlyStats.lastOrNull()?.income ?: 0.0, state.currency), modifier = Modifier.weight(1f), valueColor = PayColors.income)
+                    StatTile(title = "Расходы", value = Formatters.money(state.monthlyStats.lastOrNull()?.expense ?: 0.0, state.currency), modifier = Modifier.weight(1f), valueColor = PayColors.expense)
                 }
             }
 
             item {
                 PayCard {
-                    SectionHeader(
-                        title = "Баланс за 6 месяцев",
-                        subtitle = "На конец каждого месяца",
-                    )
-                    Spacer(Modifier.height(12.dp))
+                    SectionHeader(title = "Баланс 6 мес.", subtitle = "На конец месяца")
+                    Spacer(Modifier.height(8.dp))
                     if (state.monthlyBalance.any { it.second != 0.0 }) {
-                        AreaLineChart(
-                            values = state.monthlyBalance.map { it.second },
-                            labels = state.monthLabels,
-                            height = 140.dp,
-                            lineColor = MaterialTheme.colorScheme.primary,
-                        )
+                        AreaLineChart(values = state.monthlyBalance.map { it.second }, labels = state.monthLabels, height = 110.dp, lineColor = MaterialTheme.colorScheme.primary)
                     } else {
-                        EmptyState(
-                            icon = "📈",
-                            title = "Недостаточно данных",
-                            message = "График появится после первых операций",
-                        )
+                        EmptyState(icon = "📈", title = "Нет данных", message = "График появится после операций")
                     }
                 }
             }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = hapticClick { showExpenseDialog = true },
-                        modifier = Modifier.weight(1f),
-                    ) { Text("➖ Трата") }
-                    OutlinedButton(
-                        onClick = hapticClick { showTopUpDialog = true },
-                        modifier = Modifier.weight(1f),
-                    ) { Text("➕ Пополнить") }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(onClick = hapticClick { showExpenseDialog = true }, modifier = Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 8.dp)) {
+                        Text("➖ Трата", style = MaterialTheme.typography.labelMedium)
+                    }
+                    OutlinedButton(onClick = hapticClick { showTopUpDialog = true }, modifier = Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 8.dp)) {
+                        Text("➕ Пополнить", style = MaterialTheme.typography.labelMedium)
+                    }
+                    OutlinedButton(onClick = hapticClick { showAdjustDialog = true }, modifier = Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 8.dp)) {
+                        Text("⚖️ Правка", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
 
-            item {
-                SectionHeader(
-                    title = "Операции счёта",
-                    subtitle = "Всего: ${state.transactions.size}",
-                )
-            }
+            item { SectionHeader(title = "Операции", subtitle = "Всего: ${state.transactions.size}") }
 
             if (state.transactions.isEmpty()) {
-                item {
-                    EmptyState(
-                        icon = "🧾",
-                        title = "Операций пока нет",
-                        message = "Добавьте расход или пополните счёт",
-                    )
-                }
+                item { EmptyState(icon = "🧾", title = "Операций нет", message = "Добавьте расход или пополните") }
             } else {
-                val grouped = state.transactions.groupBy {
-                    DateUtils.formatMonthShort(DateUtils.yearMonth(it.date))
-                }
+                val grouped = state.transactions.groupBy { DateUtils.formatMonthShort(DateUtils.yearMonth(it.date)) }
                 grouped.forEach { (month, transactions) ->
                     item(key = "header-$month") {
-                        Text(
-                            text = month,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
+                        Text(month, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 3.dp))
                     }
                     items(transactions, key = { "${it.type}-${it.id}-${it.date}" }) { transaction ->
-                        TransactionRow(
-                            transaction = transaction,
-                            currency = state.currency,
-                            onDelete = { transactionToDelete = transaction },
-                        )
+                        TransactionRow(transaction = transaction, currency = state.currency, onDelete = { transactionToDelete = transaction })
                     }
                 }
             }
 
             item {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = hapticClick { showDeleteDialog = true },
-                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("🗑️ Удалить счёт «${state.categoryName}»")
-                }
-                Spacer(Modifier.height(24.dp))
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
+                ) { Text("🗑️ Удалить «${state.categoryName}»", style = MaterialTheme.typography.labelMedium) }
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
 
     if (showExpenseDialog) {
-        QuickExpenseDialog(
-            onDismiss = { showExpenseDialog = false },
-            onConfirm = { title, amount ->
-                viewModel.addQuickExpense(title, amount)
-                showExpenseDialog = false
-            },
-        )
+        QuickExpenseDialog(onDismiss = { showExpenseDialog = false }, onConfirm = { title, amount -> viewModel.addQuickExpense(title, amount); showExpenseDialog = false })
     }
-
     if (showTopUpDialog) {
-        TopUpDialog(
-            accounts = state.otherCategories,
+        TopUpDialog(accounts = state.otherCategories, currency = state.currency, onDismiss = { showTopUpDialog = false }, onConfirm = { fromId, amount -> viewModel.topUp(fromId, amount); showTopUpDialog = false })
+    }
+    if (showAdjustDialog) {
+        BalanceCorrectDialog(
+            currentBalance = state.balance?.balance ?: 0.0,
+            categoryName = state.categoryName,
+            icon = state.categoryIcon,
             currency = state.currency,
-            onDismiss = { showTopUpDialog = false },
-            onConfirm = { fromId, amount ->
-                viewModel.topUp(fromId, amount)
-                showTopUpDialog = false
-            },
+            freeFundsBalance = state.freeFundsBalance.takeIf { it > 0.5 },
+            onDismiss = { showAdjustDialog = false },
+            onConfirmDelta = { delta, comment, date, sticker -> viewModel.adjustBalance(delta, comment, date, sticker); showAdjustDialog = false },
+            onConfirmNewBalance = { newBalance, comment, date, sticker -> viewModel.setBalanceTo(newBalance, comment, state.balance?.balance ?: 0.0, date, sticker); showAdjustDialog = false },
+            onConfirmFromFreeFunds = { amount, comment, date, sticker -> viewModel.topUpFromFreeFunds(amount, sticker, comment, date); showAdjustDialog = false },
         )
     }
-
     val editingCategory = state.balance?.category
     if (showSettingsDialog && editingCategory != null) {
-        CategorySettingsDialog(
-            category = editingCategory,
-            currency = state.currency,
-            currentBalance = state.balance?.allTimeBalance ?: 0.0,
-            onDismiss = { showSettingsDialog = false },
-            onSave = {
-                viewModel.saveCategory(it)
-                showSettingsDialog = false
-            },
-        )
+        CategorySettingsDialog(category = editingCategory, currency = state.currency, currentBalance = state.balance?.allTimeBalance ?: 0.0, onDismiss = { showSettingsDialog = false }, onSave = { viewModel.saveCategory(it); showSettingsDialog = false })
     }
-
     if (showDeleteDialog) {
         ConfirmDialog(
-            title = "Удаление счёта",
-            text = "Вместе со счётом «${state.categoryName}» будут удалены все его " +
-                "операции и распределения. Действие нельзя отменить. " +
-                "Вы можете вместо этого отключить счёт в настройках категорий.",
-            confirmText = "Удалить",
-            onConfirm = {
-                viewModel.deleteCategory()
-                showDeleteDialog = false
-            },
+            title = "Удалить счёт",
+            text = "Со счётом «${state.categoryName}» удалятся все операции. Можно отключить в настройках вместо удаления.",
+            onConfirm = { viewModel.deleteCategory(); showDeleteDialog = false },
             onDismiss = { showDeleteDialog = false },
         )
     }
-
-    transactionToDelete?.let { transaction ->
+    transactionToDelete?.let { tx ->
         ConfirmDialog(
-            title = "Удаление операции",
-            text = "Удалить «${transaction.title}» на " +
-                "${Formatters.money(transaction.amount, state.currency)} " +
-                "от ${DateUtils.formatFullDate(transaction.date)}?",
-            confirmText = "Удалить",
-            onConfirm = {
-                viewModel.deleteTransaction(transaction)
-                transactionToDelete = null
-            },
+            title = "Удалить операцию",
+            text = "Удалить «${tx.title}» ${Formatters.money(tx.amount, state.currency)} от ${DateUtils.formatFullDate(tx.date)}?",
+            onConfirm = { viewModel.deleteTransaction(tx); transactionToDelete = null },
             onDismiss = { transactionToDelete = null },
         )
     }
 }
 
 @Composable
-private fun TransactionRow(
-    transaction: UiTransaction,
-    currency: String,
-    onDelete: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onDelete() }
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CategoryAvatar(icon = transaction.icon, size = 36)
-        Spacer(Modifier.width(10.dp))
+private fun TransactionRow(transaction: UiTransaction, currency: String, onDelete: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().clickable { onDelete() }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+        CategoryAvatar(icon = transaction.icon, size = 28)
+        Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = transaction.title,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = DateUtils.formatShortDate(transaction.date) +
-                    (transaction.comment?.let { " · $it" } ?: ""),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(transaction.title, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            Text(DateUtils.formatShortDate(transaction.date) + (transaction.comment?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+        val isIncoming = transaction.isIncoming || (transaction.type == com.paysplit.app.data.model.TxType.ADJUSTMENT && transaction.title.contains("+"))
+        val color = when (transaction.type) {
+            com.paysplit.app.data.model.TxType.ADJUSTMENT -> if (transaction.title.contains("+")) PayColors.income else PayColors.expense
+            else -> if (isIncoming) PayColors.income else PayColors.expense
         }
         Text(
-            text = (if (transaction.isIncoming) "+" else "−") +
-                Formatters.money(transaction.amount, currency),
-            style = MaterialTheme.typography.titleMedium,
+            (if (isIncoming) "+" else "−") + Formatters.money(transaction.amount, currency),
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color = if (transaction.isIncoming) PayColors.income else PayColors.expense,
+            color = color,
         )
     }
 }
 
-/** Диалог быстрого расхода с этого счёта. */
 @Composable
-private fun QuickExpenseDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (String, Double) -> Unit,
-) {
+private fun QuickExpenseDialog(onDismiss: () -> Unit, onConfirm: (String, Double) -> Unit) {
     var amountText by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("➖ Быстрая трата") },
+        title = { Text("➖ Быстрая трата", style = MaterialTheme.typography.titleSmall) },
         text = {
-            Column {
-                MoneyInputField(
-                    value = amountText,
-                    onValueChange = { amountText = it },
-                    label = "Сумма, ₽",
-                )
-                Spacer(Modifier.height(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма, ₽")
                 OutlinedTextField(
                     value = title,
-                    onValueChange = {
-                        title = com.paysplit.app.ui.components.capitalizeFirst(it)
-                    },
+                    onValueChange = { title = com.paysplit.app.ui.components.capitalizeFirst(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Название") },
+                    label = { Text("Название", style = MaterialTheme.typography.labelSmall) },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences,
-                        imeAction = ImeAction.Done,
-                    ),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    val amount = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
-                    if (amount > 0 && title.isNotBlank()) onConfirm(title.trim(), amount)
-                },
-                enabled = (com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0) > 0 &&
-                    title.isNotBlank(),
-            ) { Text("Добавить") }
+                onClick = { val a = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0; if (a > 0 && title.isNotBlank()) onConfirm(title.trim(), a) },
+                enabled = (com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0) > 0 && title.isNotBlank(),
+            ) { Text("Добавить", style = MaterialTheme.typography.labelMedium) }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
-        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
     )
 }
 
-/** Диалог пополнения счёта переводом с другого счёта. */
 @Composable
-private fun TopUpDialog(
-    accounts: List<Pair<Long, String>>,
-    currency: String,
-    onDismiss: () -> Unit,
-    onConfirm: (Long, Double) -> Unit,
-) {
+private fun TopUpDialog(accounts: List<Pair<Long, String>>, currency: String, onDismiss: () -> Unit, onConfirm: (Long, Double) -> Unit) {
     var amountText by remember { mutableStateOf("") }
     var fromId by remember { mutableStateOf(accounts.firstOrNull()?.first ?: 0L) }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("➕ Пополнить счёт") },
+        title = { Text("➕ Пополнить", style = MaterialTheme.typography.titleSmall) },
         text = {
-            Column {
-                Text(
-                    text = "Списать со счёта:",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(6.dp))
-                ChipRow(
-                    options = accounts.map { it.first },
-                    selected = fromId,
-                    onSelect = { fromId = it },
-                    label = { id -> accounts.firstOrNull { it.first == id }?.second ?: "?" },
-                )
-                Spacer(Modifier.height(12.dp))
-                MoneyInputField(
-                    value = amountText,
-                    onValueChange = { amountText = it },
-                    label = "Сумма перевода, $currency",
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Списать со счёта (вертикальный список):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    accounts.forEach { (id, name) ->
+                        val selected = id == fromId
+                        androidx.compose.material3.Surface(
+                            onClick = { fromId = id },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(name, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                                if (selected) Text("✓", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+                MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма, $currency")
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    val amount = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
-                    if (amount > 0 && fromId != 0L) onConfirm(fromId, amount)
-                },
-                enabled = (com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0) > 0 &&
-                    fromId != 0L,
+                onClick = { val a = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0; if (a > 0 && fromId != 0L) onConfirm(fromId, a) },
+                enabled = (com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0) > 0 && fromId != 0L,
             ) { Text("Перевести") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+    )
+}
+
+private object DetailStickers {
+    val list = listOf("💰", "💵", "💸", "🎁", "💎", "⭐", "🎉", "🏦", "🍀", "🚀", "💪", "🔥", "🌟", "🎯", "💳", "🪙", "🧧", "💚")
+}
+
+@Composable
+private fun DetailStickerPicker(selected: String, onSelect: (String) -> Unit) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 44.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(max = 120.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        gridItems(DetailStickers.list) { s ->
+            val isSel = s == selected
+            androidx.compose.material3.Surface(
+                onClick = { onSelect(s) },
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = if (isSel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.aspectRatio(1f),
+            ) { Box(contentAlignment = Alignment.Center) { Text(s, fontSize = 20.sp) } }
+        }
+    }
+}
+
+@Composable
+private fun BalanceCorrectDialog(
+    currentBalance: Double,
+    categoryName: String,
+    icon: String,
+    currency: String,
+    freeFundsBalance: Double? = null,
+    onDismiss: () -> Unit,
+    onConfirmDelta: (Double, String?, Long, String?) -> Unit,
+    onConfirmNewBalance: (Double, String?, Long, String?) -> Unit,
+    onConfirmFromFreeFunds: ((Double, String?, Long, String?) -> Unit)? = null,
+) {
+    var mode by remember { mutableStateOf(0) }
+    var amountText by remember { mutableStateOf("") }
+    var isIncrease by remember { mutableStateOf(true) }
+    var newBalanceText by remember { mutableStateOf("") }
+    var commentText by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sticker by remember { mutableStateOf(DetailStickers.list.first()) }
+    var fromFreeFunds by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("⚖️ Коррекция баланса", style = MaterialTheme.typography.titleSmall) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CategoryAvatar(icon = icon, size = 28)
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(categoryName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Сейчас: ${Formatters.money(currentBalance, currency)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)) {
+                    Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Как это работает:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text("• «На сумму» — прибавляет/списывает разницу. • «Установить» — задаёт точный новый баланс.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(selected = mode == 0, onClick = { mode = 0 }, label = { Text("➕➖ На сумму", style = MaterialTheme.typography.labelSmall) })
+                    FilterChip(selected = mode == 1, onClick = { mode = 1 }, label = { Text("🎯 Установить баланс", style = MaterialTheme.typography.labelSmall) })
+                }
+                if (mode == 0) {
+                    Text("Укажите сколько прибавить или списать:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(selected = isIncrease, onClick = { isIncrease = true }, label = { Text("＋ Пополнить", style = MaterialTheme.typography.labelSmall) })
+                        FilterChip(selected = !isIncrease, onClick = { isIncrease = false }, label = { Text("− Списать", style = MaterialTheme.typography.labelSmall) })
+                    }
+                    MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма коррекции, $currency")
+                    if (isIncrease) {
+                        Spacer(Modifier.height(4.dp))
+                        Text("Стикер пополнения:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        DetailStickerPicker(selected = sticker, onSelect = { sticker = it })
+                        if (onConfirmFromFreeFunds != null && freeFundsBalance != null) {
+                            Spacer(Modifier.height(4.dp))
+                            FilterChip(
+                                selected = fromFreeFunds,
+                                onClick = { fromFreeFunds = !fromFreeFunds },
+                                label = { Text("💵 Из свободных (${Formatters.money(freeFundsBalance, currency)})", style = MaterialTheme.typography.labelSmall) }
+                            )
+                            if (fromFreeFunds) Text("Будет перевод из 💵 Свободные средства", style = MaterialTheme.typography.labelSmall, color = PayColors.income)
+                        }
+                    }
+                    val parsed = com.paysplit.app.ui.components.parseMoney(amountText)
+                    if (parsed != null && parsed > 0) {
+                        val preview = if (isIncrease) currentBalance + parsed else currentBalance - parsed
+                        androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) {
+                            Text("Было ${Formatters.money(currentBalance, currency)} ${if (isIncrease) "+" else "−"} ${Formatters.money(parsed, currency)} → станет ${Formatters.money(preview, currency)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(8.dp))
+                        }
+                    } else Text("Пример: было 5 000 ₽ + 1 000 ₽ → станет 6 000 ₽", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text("Введите какой баланс должен стать:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    MoneyInputField(value = newBalanceText, onValueChange = { newBalanceText = it }, label = "Новый баланс, $currency")
+                    val parsed = com.paysplit.app.ui.components.parseMoney(newBalanceText)
+                    if (parsed != null) {
+                        val delta = parsed - currentBalance
+                        if (delta > 0) {
+                            Spacer(Modifier.height(4.dp))
+                            Text("Стикер пополнения:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            DetailStickerPicker(selected = sticker, onSelect = { sticker = it })
+                            if (onConfirmFromFreeFunds != null && freeFundsBalance != null) {
+                                Spacer(Modifier.height(4.dp))
+                                FilterChip(
+                                    selected = fromFreeFunds,
+                                    onClick = { fromFreeFunds = !fromFreeFunds },
+                                    label = { Text("💵 Из свободных (${Formatters.money(freeFundsBalance, currency)})", style = MaterialTheme.typography.labelSmall) }
+                                )
+                                if (fromFreeFunds) Text("Будет перевод из 💵 Свободные средства", style = MaterialTheme.typography.labelSmall, color = PayColors.income)
+                            }
+                        }
+                        androidx.compose.material3.Surface(color = if (delta >= 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) {
+                            Column(Modifier.padding(8.dp)) {
+                                Text("Было ${Formatters.money(currentBalance, currency)} → станет ${Formatters.money(parsed, currency)}", style = MaterialTheme.typography.labelSmall)
+                                Text("Запишется: ${if (delta >= 0) "+" else ""}${Formatters.money(delta, currency)} ${if (delta >= 0) "пополнение" else "списание"}", style = MaterialTheme.typography.labelSmall, color = if (delta >= 0) PayColors.income else PayColors.expense, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    } else Text("Пример: было 5 000 ₽ → ввели 8 000 ₽ → запишется +3 000 ₽", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                OutlinedTextField(
+                    value = commentText,
+                    onValueChange = { commentText = com.paysplit.app.ui.components.capitalizeFirst(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Комментарий", style = MaterialTheme.typography.labelSmall) },
+                    placeholder = { Text("Напр.: исправил ошибку, нашёл наличные...", style = MaterialTheme.typography.labelSmall) },
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                )
+                DateField(date = date, onDateChange = { date = it }, label = "Дата коррекции")
+                Text("Коррекция попадёт в историю — можно удалить.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         },
+        confirmButton = {
+            val canSave = if (mode == 0) (com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0) > 0 else com.paysplit.app.ui.components.parseMoney(newBalanceText) != null
+            Button(onClick = {
+                if (mode == 0) {
+                    val a = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
+                    if (a > 0) {
+                        if (fromFreeFunds && isIncrease && onConfirmFromFreeFunds != null) {
+                            onConfirmFromFreeFunds(a, commentText, date, sticker)
+                        } else {
+                            onConfirmDelta(if (isIncrease) a else -a, commentText, date, if (isIncrease) sticker else null)
+                        }
+                    }
+                } else {
+                    val nb = com.paysplit.app.ui.components.parseMoney(newBalanceText)
+                    if (nb != null) {
+                        val delta = nb - currentBalance
+                        if (fromFreeFunds && delta > 0 && onConfirmFromFreeFunds != null) {
+                            onConfirmFromFreeFunds(delta, commentText, date, sticker)
+                        } else {
+                            onConfirmNewBalance(nb, commentText, date, if ((nb - currentBalance) > 0) sticker else null)
+                        }
+                    }
+                }
+            }, enabled = canSave) { Text("Сохранить", style = MaterialTheme.typography.labelMedium) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
     )
 }

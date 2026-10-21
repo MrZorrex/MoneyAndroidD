@@ -124,39 +124,16 @@ fun CategoriesScreen(
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "Доход в месяц",
+                            text = "Счетов",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = Formatters.money(state.expectedIncome, state.currency),
+                            text = "${state.items.count { it.category.isActive }} / ${state.items.size}",
                             style = MaterialTheme.typography.titleLarge,
                         )
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                AnimatedProgress(
-                    progress = if (state.totalPlan > 0) {
-                        (state.expectedIncome / state.totalPlan).toFloat().coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    },
-                    height = 8,
-                    color = if (state.difference >= 0) PayColors.income else PayColors.expense,
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = if (state.difference >= 0) {
-                        "✅ Свободно " + Formatters.money(state.difference, state.currency) +
-                            " после распределения"
-                    } else {
-                        "⚠️ Не хватает " +
-                            Formatters.money(-state.difference, state.currency) +
-                            " — планы превышают доход"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (state.difference >= 0) PayColors.income else PayColors.expense,
-                )
             }
 
             if (state.items.isEmpty()) {
@@ -373,17 +350,22 @@ private fun DraggableCategoryList(
                                 )
                             }
                         }
+                        val percent = (item.monthProgress * 100).toInt()
+                        val remainingText = if (item.remainingToPlan >= -0.005) {
+                            Formatters.money(item.remainingToPlan.coerceAtLeast(0.0), currency) + " осталось"
+                        } else {
+                            Formatters.money(-item.remainingToPlan, currency) + " превышено"
+                        }
                         Text(
                             text = "План " +
                                 Formatters.money(item.category.monthlyPlan, currency) +
-                                " · осталось " +
-                                Formatters.money(item.remainingToPlan, currency),
+                                " · $percent% · $remainingText",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(4.dp))
                         AnimatedProgress(
-                            progress = item.monthProgress,
+                            progress = item.monthProgress.coerceIn(0f, 1f),
                             color = PayColors.ofStatus(item.status),
                             height = 4,
                         )
