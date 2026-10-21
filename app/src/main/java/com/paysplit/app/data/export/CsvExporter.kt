@@ -51,20 +51,9 @@ object CsvExporter {
                 .append(escape(t.comment ?: "")).append('\n')
         }
 
-        data.adjustments.sortedBy { it.date }.forEach { a ->
-            val category = data.category(a.categoryId)
-            val isPlus = a.amount >= 0
-            sb.append(DateUtils.formatFullDate(a.date)).append(SEPARATOR)
-                .append("Коррекция").append(SEPARATOR)
-                .append(escape(category?.name ?: "—")).append(SEPARATOR)
-                .append(if (isPlus) "Коррекция +" else "Коррекция −").append(SEPARATOR)
-                .append((if (isPlus) "+" else "-") + Formatters.money(kotlin.math.abs(a.amount), "")).append(SEPARATOR)
-                .append(escape(a.comment ?: "")).append('\n')
-        }
-
         // Итоги
-        val income = data.distributions.sumOf { it.amount } + data.adjustments.filter { it.amount > 0 }.sumOf { it.amount }
-        val expense = data.expenses.sumOf { it.amount } + data.adjustments.filter { it.amount < 0 }.sumOf { -it.amount }
+        val income = data.distributions.sumOf { it.amount }
+        val expense = data.expenses.sumOf { it.amount }
         sb.append('\n')
             .append("ИТОГО").append(SEPARATOR)
             .append("Поступления").append(SEPARATOR).append(SEPARATOR).append(SEPARATOR)
@@ -92,6 +81,5 @@ object CsvExporter {
         TxType.EXPENSE -> "Расход"
         TxType.TRANSFER_OUT -> "Перевод (списание)"
         TxType.TRANSFER_IN -> "Перевод (зачисление)"
-        TxType.ADJUSTMENT -> "Коррекция"
     }
 }

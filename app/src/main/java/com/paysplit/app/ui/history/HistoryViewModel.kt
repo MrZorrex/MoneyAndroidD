@@ -53,11 +53,8 @@ class HistoryViewModel(private val repository: PaySplitRepository) : ViewModel()
         combine(repository.data, filters) { data, f ->
             val (from, to) = rangeFor(f)
             val transactions = TransactionBuilder.build(data, from, to, f.type, f.categoryId)
-            // Доход — сумма всех поступлений (IncomeEntity), а не распределений
-            val income = data.incomes.filter { it.date in from..to }.sumOf { it.amount }
-            val expense = data.expenses.filter {
-                it.date in from..to && (f.categoryId == null || it.categoryId == f.categoryId)
-            }.sumOf { it.amount }
+            val income = transactions.filter { it.isIncoming }.sumOf { it.amount }
+            val expense = transactions.filter { !it.isIncoming }.sumOf { it.amount }
 
             HistoryUiState(
                 filters = f,
@@ -114,19 +111,8 @@ class HistoryViewModel(private val repository: PaySplitRepository) : ViewModel()
 
                 com.paysplit.app.data.model.TxType.INCOME ->
                     repository.deleteIncome(transaction.sourceId)
-
-                com.paysplit.app.data.model.TxType.ADJUSTMENT ->
-                    repository.deleteAdjustment(transaction.sourceId)
             }
         }
-    }
-
-    fun updateTransfer(transfer: com.paysplit.app.data.model.TransferEntity) {
-        viewModelScope.launch { repository.updateTransfer(transfer) }
-    }
-
-    fun updateAdjustment(adjustment: com.paysplit.app.data.model.BalanceAdjustmentEntity) {
-        viewModelScope.launch { repository.updateAdjustment(adjustment) }
     }
 
     private fun rangeFor(f: HistoryFilters): Pair<Long, Long> {

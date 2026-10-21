@@ -3,7 +3,6 @@ package com.paysplit.app.data.local
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import androidx.room.Update
 import com.paysplit.app.data.model.TransferEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -21,9 +20,6 @@ interface TransferDao {
 
     @Insert
     suspend fun insert(transfer: TransferEntity): Long
-
-    @Update
-    suspend fun update(transfer: TransferEntity)
 
     @Query("DELETE FROM transfers WHERE id = :id")
     suspend fun deleteById(id: Long)

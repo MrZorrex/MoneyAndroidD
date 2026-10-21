@@ -71,7 +71,7 @@ object AnalyticsEngine {
             val mEnd = DateUtils.millisOf(ym.atEndOfMonth()) + 86_400_000L - 1
             MonthStat(
                 yearMonth = ym,
-                income = data.incomes.filter { it.date in mStart..mEnd }.sumOf { it.amount },
+                income = distributions.filter { it.date in mStart..mEnd }.sumOf { it.amount },
                 expense = expenses.filter { it.date in mStart..mEnd }.sumOf { it.amount },
             )
         }
@@ -179,15 +179,13 @@ object AnalyticsEngine {
                 .sumOf { it.amount }
             val transferIn = data.transfers.filter { it.toCategoryId in savingsIds && it.date <= mEnd }
                 .sumOf { it.amount }
-            val adjIn = data.adjustments.filter { it.categoryId in savingsIds && it.date <= mEnd && it.amount > 0 }.sumOf { it.amount }
             val outflow = data.expenses
                 .filter { it.categoryId in savingsIds && it.date <= mEnd }
                 .sumOf { it.amount }
             val transferOut = data.transfers
                 .filter { it.fromCategoryId in savingsIds && it.date <= mEnd }
                 .sumOf { it.amount }
-            val adjOut = data.adjustments.filter { it.categoryId in savingsIds && it.date <= mEnd && it.amount < 0 }.sumOf { -it.amount }
-            ym to (inflow + transferIn + adjIn - outflow - transferOut - adjOut)
+            ym to (inflow + transferIn - outflow - transferOut)
         }
     }
 
@@ -226,11 +224,9 @@ object AnalyticsEngine {
             .toSet()
         val inflow = data.distributions.filter { it.categoryId in savingsIds }.sumOf { it.amount }
         val transferIn = data.transfers.filter { it.toCategoryId in savingsIds }.sumOf { it.amount }
-        val adjIn = data.adjustments.filter { it.categoryId in savingsIds && it.amount > 0 }.sumOf { it.amount }
         val outflow = data.expenses.filter { it.categoryId in savingsIds }.sumOf { it.amount }
         val transferOut = data.transfers.filter { it.fromCategoryId in savingsIds }.sumOf { it.amount }
-        val adjOut = data.adjustments.filter { it.categoryId in savingsIds && it.amount < 0 }.sumOf { -it.amount }
-        return inflow + transferIn + adjIn - outflow - transferOut - adjOut
+        return inflow + transferIn - outflow - transferOut
     }
 
     /** Накопительные счета с прогрессом к цели. */
@@ -243,12 +239,10 @@ object AnalyticsEngine {
             .map { category ->
                 val inflow = data.distributions.filter { it.categoryId == category.id }
                     .sumOf { it.amount } +
-                    data.transfers.filter { it.toCategoryId == category.id }.sumOf { it.amount } +
-                    data.adjustments.filter { it.categoryId == category.id && it.amount > 0 }.sumOf { it.amount }
+                    data.transfers.filter { it.toCategoryId == category.id }.sumOf { it.amount }
                 val outflow = data.expenses.filter { it.categoryId == category.id }
                     .sumOf { it.amount } +
-                    data.transfers.filter { it.fromCategoryId == category.id }.sumOf { it.amount } +
-                    data.adjustments.filter { it.categoryId == category.id && it.amount < 0 }.sumOf { -it.amount }
+                    data.transfers.filter { it.fromCategoryId == category.id }.sumOf { it.amount }
                 category to (inflow - outflow)
             }
             .sortedBy { it.first.sortOrder }

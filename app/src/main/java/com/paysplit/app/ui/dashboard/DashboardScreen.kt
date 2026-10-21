@@ -1,6 +1,5 @@
 package com.paysplit.app.ui.dashboard
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,19 +9,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -42,11 +37,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.paysplit.app.data.model.CategoryStatus
 import com.paysplit.app.data.model.UiTransaction
 import com.paysplit.app.domain.BalanceCalculator
 import com.paysplit.app.ui.LocalViewModelFactory
 import com.paysplit.app.ui.components.AnimatedProgress
 import com.paysplit.app.ui.components.CategoryAvatar
+import com.paysplit.app.ui.components.CategorySettingsDialog
 import com.paysplit.app.ui.components.DonutChart
 import com.paysplit.app.ui.components.DonutLegend
 import com.paysplit.app.ui.components.DonutSlice
@@ -63,35 +60,31 @@ import com.paysplit.app.util.DateUtils
 import com.paysplit.app.util.Formatters
 
 /**
- * Главный экран — компактная статистика + история трат.
- * Счета вынесены в отдельную вкладку «Счета».
+ * ЭКРАН 2 — Главный экран (Dashboard).
  */
 @Composable
 fun DashboardScreen(
     onAddIncome: () -> Unit,
     onAddExpense: () -> Unit,
     onCategoryClick: (Long) -> Unit,
-    onOpenAccounts: () -> Unit,
+    onOpenCategories: () -> Unit,
     viewModel: DashboardViewModel = viewModel(factory = LocalViewModelFactory.current),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showTransfer by remember { mutableStateOf(false) }
     var editingCategoryId by remember { mutableStateOf<Long?>(null) }
-    var showFreeDistribute by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(
-                    onClick = hapticClick { onAddExpense() },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                ) { Text("➕ Траты", style = MaterialTheme.typography.labelMedium) }
+            Column(horizontalAlignment = Alignment.End) {
                 FilledTonalButton(
                     onClick = hapticClick { showTransfer = true },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                ) { Text("↔️ Перевод", style = MaterialTheme.typography.labelMedium) }
+                    modifier = Modifier.padding(bottom = 12.dp),
+                ) {
+                    Text("↔️ Перевод", maxLines = 1)
+                }
                 ExtendedFloatingActionButton(
-                    text = { Text("Пришла зарплата!", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) },
+                    text = { Text(text = "Пришла зарплата!", fontWeight = FontWeight.Bold) },
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     onClick = hapticClick(onAddIncome),
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -104,94 +97,155 @@ fun DashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Spacer(Modifier.height(4.dp))
-                MonthHeaderCompact(state = state)
+                Spacer(Modifier.height(8.dp))
+                MonthHeaderCard(state = state)
             }
 
-            if (state.freeAmount > 0) {
-                item {
-                    FreeFundsCard(amount = state.freeAmount, currency = state.currency, onDistribute = { showFreeDistribute = true })
+            item {
+                PayCard {
+                    SectionHeader(
+                        title = "Сводка за месяц",
+                        subtitle = state.monthLabel,
+                        trailing = {
+                            Text(
+                                text = if (state.monthNet >= 0) "▲" else "▼",
+                                color = if (state.monthNet >= 0) PayColors.income
+                                else PayColors.expense,
+                            )
+                        },
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            InfoRow(
+                                label = "Доходы",
+                                value = Formatters.money(state.monthIncome, state.currency),
+                                valueColor = PayColors.income,
+                            )
+                            InfoRow(
+                                label = "Расходы",
+                                value = Formatters.money(state.monthExpense, state.currency),
+                                valueColor = PayColors.expense,
+                            )
+                            InfoRow(
+                                label = "Остаток",
+                                value = Formatters.money(state.monthNet, state.currency),
+                                valueColor = if (state.monthNet >= 0) PayColors.income
+                                else PayColors.expense,
+                            )
+                            InfoRow(
+                                label = "Общий баланс",
+                                value = Formatters.money(state.totalBalance, state.currency),
+                                valueColor = if (state.totalBalance >= 0) PayColors.income
+                                else PayColors.expense,
+                            )
+                        }
+                        if (state.expenseByCategory.isNotEmpty()) {
+                            BoxWithConstraints(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 8.dp),
+                            ) {
+                                val chartSize = maxWidth.coerceAtMost(160.dp)
+                                DonutChart(
+                                    slices = state.expenseByCategory.mapIndexed { index, item ->
+                                        DonutSlice(
+                                            value = item.amount,
+                                            color = SemanticColors.chartPalette[
+                                                index % SemanticColors.chartPalette.size
+                                            ],
+                                            label = item.name,
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    total = state.monthExpense,
+                                    strokeWidth = 18.dp,
+                                    chartSize = chartSize,
+                                )
+                            }
+                        }
+                    }
+                    if (state.expenseByCategory.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        DonutLegend(
+                            slices = state.expenseByCategory.mapIndexed { index, item ->
+                                DonutSlice(
+                                    value = item.amount,
+                                    color = SemanticColors.chartPalette[
+                                        index % SemanticColors.chartPalette.size
+                                    ],
+                                    label = "${item.icon} ${item.name}",
+                                )
+                            },
+                            currency = state.currency,
+                        )
+                    }
                 }
             }
 
             item {
-                SummaryCompactCard(state = state)
-            }
-
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Счета", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            "${state.balances.count { it.category.isActive }} активных · ${Formatters.money(state.balances.sumOf { it.balance.coerceAtLeast(0.0) }, state.currency)} на счетах",
-                            style = MaterialTheme.typography.labelSmall,
+                            text = "Счета",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = "${state.balances.count { it.category.isActive }} активных",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    TextButton(onClick = hapticClick(onOpenAccounts), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
-                        Text("Все ›", style = MaterialTheme.typography.labelMedium)
+                    TextButton(onClick = onOpenCategories) {
+                        Text("Управлять", maxLines = 1)
+                    }
+                    Spacer(Modifier.width(4.dp))
+                    Button(onClick = hapticClick(onAddExpense)) {
+                        Text("➕ Расход", maxLines = 1)
                     }
                 }
             }
 
             if (state.balances.isEmpty()) {
-                item { EmptyState(icon = "🗂️", title = "Счетов нет", message = "Добавьте счета во вкладке «Счета»") }
-            } else {
                 item {
-                    AccountsPreviewRow(
-                        balances = state.balances,
-                        currency = state.currency,
-                        onCategoryClick = onCategoryClick,
-                        onEditCategory = { editingCategoryId = it },
+                    EmptyState(
+                        icon = "🗂️",
+                        title = "Счетов пока нет",
+                        message = "Добавьте категории, чтобы распределять зарплату",
                     )
                 }
             }
 
-            // История — все приходы, уходы и изменения
+            items(state.balances, key = { it.category.id }) { balance ->
+                CategoryBalanceCard(
+                    balance = balance,
+                    currency = state.currency,
+                    onClick = { onCategoryClick(balance.category.id) },
+                    onEdit = { editingCategoryId = balance.category.id },
+                )
+            }
+
             if (state.recentTransactions.isNotEmpty()) {
                 item {
                     SectionHeader(
-                        title = "История",
-                        subtitle = "Все приходы, уходы и изменения · ${state.recentTransactions.size} за месяц",
-                        trailing = {
-                            if (state.recentTransactions.size >= 10) {
-                                Text(
-                                    text = "${state.recentTransactions.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(start = 4.dp)
-                                )
-                            }
-                        }
+                        title = "Последние операции",
+                        subtitle = "За текущий месяц",
                     )
                 }
-                val grouped = state.recentTransactions.groupBy { DateUtils.localDate(it.date) }
-                grouped.forEach { (date, list) ->
-                    item(key = "day-$date") {
-                        Text(
-                            text = DateUtils.formatRelativeDay(DateUtils.millisOf(date)),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                    }
-                    items(list, key = { "${it.type}-${it.id}-${it.date}" }) { tx ->
-                        CompactTransactionRow(transaction = tx, currency = state.currency)
-                    }
-                }
-            } else {
-                item {
-                    PayCard {
-                        Text("История пуста", style = MaterialTheme.typography.titleSmall)
-                        Spacer(Modifier.height(2.dp))
-                        Text("Нажмите «Пришла зарплата», «➕ Траты» или сделайте коррекцию — всё появится здесь", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                items(state.recentTransactions, key = { "${it.type}-${it.id}" }) { transaction ->
+                    RecentTransactionRow(transaction = transaction, currency = state.currency)
                 }
             }
 
@@ -200,75 +254,83 @@ fun DashboardScreen(
     }
 
     if (showTransfer) {
-        TransferDialog(viewModel = viewModel, onDismiss = { showTransfer = false })
-    }
-
-    if (showFreeDistribute) {
-        DistributeFreeFundsDialog(
-            state = state,
+        TransferDialog(
             viewModel = viewModel,
-            onDismiss = { showFreeDistribute = false },
+            onDismiss = { showTransfer = false },
         )
     }
 
-    val editingCategory = editingCategoryId?.let { id -> state.balances.firstOrNull { it.category.id == id }?.category }
+    val editingBalance = editingCategoryId?.let { id ->
+        state.balances.firstOrNull { it.category.id == id }
+    }
+    val editingCategory = editingBalance?.category
     if (editingCategory != null) {
-        com.paysplit.app.ui.components.CategorySettingsDialog(
+        CategorySettingsDialog(
             category = editingCategory,
             currency = state.currency,
+            currentBalance = editingBalance?.allTimeBalance ?: 0.0,
             onDismiss = { editingCategoryId = null },
-            onSave = { updated ->
-                viewModel.saveCategory(updated)
+            onSave = {
+                viewModel.saveCategory(it)
                 editingCategoryId = null
             },
-            currentBalance = state.balances.firstOrNull { it.category.id == editingCategory.id }?.allTimeBalance ?: 0.0,
         )
     }
 }
 
 @Composable
-private fun MonthHeaderCompact(state: DashboardUiState) {
+private fun MonthHeaderCard(state: DashboardUiState) {
     PayCard(containerColor = MaterialTheme.colorScheme.primaryContainer) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(state.monthLabel, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    "Поступлений: ${state.incomeCount} из ${state.paydayCount} · ${progressSubtitle(state)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text(
-                text = "${(state.incomeProgress * 100).toInt()}%",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
-        Spacer(Modifier.height(6.dp))
+        Text(
+            text = state.monthLabel,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "Поступлений: ${state.incomeCount} из ${state.paydayCount} в этом месяце",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Spacer(Modifier.height(12.dp))
         AnimatedProgress(
             progress = state.incomeProgress,
             color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-            height = 6,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            height = 10,
         )
         Spacer(Modifier.height(8.dp))
+        Text(
+            text = progressSubtitle(state),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Spacer(Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Общий баланс", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                MoneyValue(value = state.totalBalance, color = MaterialTheme.colorScheme.onPrimaryContainer, currency = state.currency, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-            }
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-                Text("Остаток месяца", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 Text(
-                    text = Formatters.money(state.monthNet, state.currency),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (state.monthNet >= 0) PayColors.income else PayColors.expense,
+                    text = "Общий баланс",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                MoneyValue(
+                    value = state.totalBalance,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    currency = state.currency,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "Остаток месяца",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                MoneyValue(
+                    value = state.monthNet,
+                    color = if (state.monthNet >= 0) PayColors.income else PayColors.expense,
+                    currency = state.currency,
+                    maxLines = 1,
                 )
             }
         }
@@ -276,224 +338,176 @@ private fun MonthHeaderCompact(state: DashboardUiState) {
 }
 
 private fun progressSubtitle(state: DashboardUiState): String {
-    val plan = if (state.expectedIncome > 0) Formatters.money(state.expectedIncome, state.currency)
-    else "~" + Formatters.money(state.balances.sumOf { it.category.monthlyPlan }, state.currency)
-    return "${Formatters.money(state.receivedThisMonth, state.currency)} из $plan"
+    val plan = if (state.expectedIncome > 0) {
+        Formatters.money(state.expectedIncome, state.currency)
+    } else {
+        "~" + Formatters.money(
+            state.balances.sumOf { it.category.monthlyPlan },
+            state.currency,
+        )
+    }
+    return "Получено ${Formatters.money(state.receivedThisMonth, state.currency)} из $plan"
 }
 
 @Composable
-private fun SummaryCompactCard(state: DashboardUiState) {
-    PayCard {
-        SectionHeader(title = "Сводка за месяц", subtitle = state.monthLabel)
-        Spacer(Modifier.height(8.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                InfoRow(label = "Доходы", value = Formatters.money(state.monthIncome, state.currency), valueColor = PayColors.income)
-                InfoRow(label = "Расходы", value = Formatters.money(state.monthExpense, state.currency), valueColor = PayColors.expense)
-                InfoRow(label = "Остаток", value = Formatters.money(state.monthNet, state.currency), valueColor = if (state.monthNet >= 0) PayColors.income else PayColors.expense)
+private fun CategoryBalanceCard(
+    balance: BalanceCalculator.CategoryBalance,
+    currency: String,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+) {
+    val statusColor = PayColors.ofStatus(balance.status)
+    val click = hapticClick(onClick)
+    PayCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = if (balance.status == CategoryStatus.OVERSPEND) {
+            MaterialTheme.colorScheme.errorContainer
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CategoryAvatar(icon = balance.category.icon)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = balance.category.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = if (balance.category.type == com.paysplit.app.data.model.CategoryType.SAVINGS) {
+                        "Накопительный" + (balance.category.targetAmount?.let {
+                            " · цель ${Formatters.money(it, currency)}"
+                        } ?: "")
+                    } else {
+                        "Оплата сразу"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            if (state.expenseByCategory.isNotEmpty()) {
-                BoxWithConstraints(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
-                    val chartSize = maxWidth.coerceAtMost(120.dp)
-                    DonutChart(
-                        slices = state.expenseByCategory.mapIndexed { index, item ->
-                            DonutSlice(
-                                value = item.amount,
-                                color = SemanticColors.chartPalette[index % SemanticColors.chartPalette.size],
-                                label = item.name,
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        total = state.monthExpense,
-                        strokeWidth = 14.dp,
-                        chartSize = chartSize,
-                    )
-                }
-            }
+            StatusDot(status = balance.status)
         }
-        if (state.expenseByCategory.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            DonutLegend(
-                slices = state.expenseByCategory.mapIndexed { index, item ->
-                    DonutSlice(
-                        value = item.amount,
-                        color = SemanticColors.chartPalette[index % SemanticColors.chartPalette.size],
-                        label = "${item.icon} ${item.name}",
-                    )
-                },
-                currency = state.currency,
+
+        Spacer(Modifier.height(10.dp))
+        AnimatedProgress(
+            progress = balance.monthProgress,
+            color = statusColor,
+            height = 6,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Распределено ${Formatters.money(balance.allocatedThisMonth, currency)}" +
+                    " из ${Formatters.money(balance.category.monthlyPlan, currency)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "Осталось ${Formatters.money(balance.remainingToPlan, currency)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            MoneyValue(
+                value = balance.balance,
+                color = if (balance.balance < 0) PayColors.expense else PayColors.income,
+                style = MaterialTheme.typography.titleLarge,
+                currency = currency,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+            )
+            Button(
+                onClick = onEdit,
+                colors = ButtonDefaults.textButtonColors(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 8.dp,
+                    vertical = 0.dp,
+                ),
+            ) { Text("✏️ План", maxLines = 1) }
+            Button(
+                onClick = click,
+                colors = ButtonDefaults.textButtonColors(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 8.dp,
+                    vertical = 0.dp,
+                ),
+            ) { Text("Открыть", maxLines = 1) }
+        }
+        Text(
+            text = "Трат за месяц: ${balance.spentThisMonth.let {
+                Formatters.money(it, currency)
+            }}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        if (balance.isOverspend) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "⚠️ Перерасход: расходы превысили поступления на " +
+                    Formatters.money(-balance.balance, currency),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }
 }
 
 @Composable
-private fun AccountsPreviewRow(
-    balances: List<BalanceCalculator.CategoryBalance>,
-    currency: String,
-    onCategoryClick: (Long) -> Unit,
-    onEditCategory: (Long) -> Unit,
-) {
-    // Вертикальный список счетов вместо горизонтальной прокрутки
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        balances.forEach { b ->
-            androidx.compose.material3.Card(
-                modifier = Modifier.fillMaxWidth().clickable { onCategoryClick(b.category.id) },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = if (b.status == com.paysplit.app.data.model.CategoryStatus.OVERSPEND) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CategoryAvatar(icon = b.category.icon, size = 28)
-                    Spacer(Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(b.category.name, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                            Spacer(Modifier.width(4.dp))
-                            StatusDot(status = b.status)
-                        }
-                        Spacer(Modifier.height(2.dp))
-                        Text(Formatters.money(b.balance, currency), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (b.balance < 0) PayColors.expense else PayColors.income, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Spacer(Modifier.height(2.dp))
-                        AnimatedProgress(progress = b.monthProgress, color = PayColors.ofStatus(b.status), height = 4)
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            "${(b.monthProgress * 100).toInt()}% · ${Formatters.money(b.remainingToPlan, currency)} ост.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    Spacer(Modifier.width(4.dp))
-                    TextButton(onClick = { onEditCategory(b.category.id) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
-                        Text("✏️", style = MaterialTheme.typography.labelMedium)
-                    }
-                    Text("›", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompactTransactionRow(transaction: UiTransaction, currency: String) {
+private fun RecentTransactionRow(transaction: UiTransaction, currency: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CategoryAvatar(icon = transaction.icon, size = 28)
-        Spacer(Modifier.width(8.dp))
+        Box {
+            CategoryAvatar(icon = transaction.icon, size = 36)
+        }
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(transaction.title, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                "${transaction.categoryName} · ${DateUtils.formatShortDate(transaction.date)}" + (transaction.comment?.let { " · $it" } ?: ""),
-                style = MaterialTheme.typography.labelSmall,
+                text = transaction.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${transaction.categoryName} · ${DateUtils.formatShortDate(transaction.date)}",
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.width(8.dp))
         Text(
-            text = (if (transaction.isIncoming) "+" else "−") + Formatters.money(transaction.amount, currency),
-            style = MaterialTheme.typography.labelLarge,
+            text = (if (transaction.isIncoming) "+" else "−") +
+                Formatters.money(transaction.amount, currency),
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = when (transaction.type) {
-                com.paysplit.app.data.model.TxType.ADJUSTMENT -> if (transaction.title.contains("+")) PayColors.income else PayColors.expense
-                else -> if (transaction.isIncoming) PayColors.income else PayColors.expense
-            },
-            maxLines = 1,
+            color = if (transaction.isIncoming) PayColors.income else PayColors.expense,
         )
     }
 }
 
-@Composable
-private fun FreeFundsCard(amount: Double, currency: String, onDistribute: () -> Unit) {
-    PayCard(containerColor = MaterialTheme.colorScheme.secondaryContainer) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("💵", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Свободные средства", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    "${Formatters.money(amount, currency)} сверх плана — распределите по счетам",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Button(
-            onClick = hapticClick(onDistribute),
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-        ) { Text("Распределить по счетам", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
-    }
-}
-
-@Composable
-private fun DistributeFreeFundsDialog(state: DashboardUiState, viewModel: DashboardViewModel, onDismiss: () -> Unit) {
-    val free = state.freeAmount
-    val accounts = state.balances.filter { it.category.isActive }.filterNot { it.category.name.contains("Свобод") }
-    var amounts by remember { mutableStateOf(accounts.associate { it.category.id to "" }.toMutableMap()) }
-    val sumAllocated = amounts.values.sumOf { com.paysplit.app.ui.components.parseMoney(it) ?: 0.0 }
-    val remaining = free - sumAllocated
-
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Распределить ${Formatters.money(free, state.currency)}", style = MaterialTheme.typography.titleSmall) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Свободные средства сверх ожидаемого дохода — распределите между счетами", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Осталось распределить: ${Formatters.money(remaining.coerceAtLeast(0.0), state.currency)}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (remaining < -0.01) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(4.dp))
-                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (accounts.isEmpty()) {
-                        Text("Нет счетов", style = MaterialTheme.typography.labelSmall)
-                    } else {
-                        accounts.forEach { b ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CategoryAvatar(icon = b.category.icon, size = 24)
-                                Spacer(Modifier.width(8.dp))
-                                Text(b.category.name, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            com.paysplit.app.ui.components.MoneyInputField(
-                                value = amounts[b.category.id] ?: "",
-                                onValueChange = { v -> amounts = amounts.toMutableMap().also { it[b.category.id] = v } },
-                                label = "Сумма → ${b.category.name}",
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(4.dp))
-                androidx.compose.material3.FilledTonalButton(
-                    onClick = {
-                        if (accounts.isEmpty()) return@FilledTonalButton
-                        val equal = free / accounts.size
-                        amounts = accounts.associate { it.category.id to equal.toLong().toString() }.toMutableMap()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Поровну между всеми", style = MaterialTheme.typography.labelMedium) }
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                val allocations = amounts.mapNotNull { (id, txt) ->
-                    val v = com.paysplit.app.ui.components.parseMoney(txt) ?: 0.0
-                    if (v > 0) id to v else null
-                }
-                if (allocations.isNotEmpty()) {
-                    viewModel.distributeFreeFunds(allocations)
-                    onDismiss()
-                }
-            }, enabled = sumAllocated in 0.01..(free + 0.01)) { Text("Перевести", style = MaterialTheme.typography.labelMedium) }
-        },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Отмена", style = MaterialTheme.typography.labelMedium) } },
-    )
-}
-
-/** Диалог перевода средств между счетами — вертикальный выбор. */
+/** Диалог перевода средств между счетами. */
 @Composable
 private fun TransferDialog(
     viewModel: DashboardViewModel,
@@ -502,65 +516,64 @@ private fun TransferDialog(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var amountText by remember { mutableStateOf("") }
     var fromId by remember { mutableStateOf(state.balances.firstOrNull()?.category?.id ?: 0L) }
-    var toId by remember { mutableStateOf(state.balances.getOrNull(1)?.category?.id ?: 0L) }
+    var toId by remember {
+        mutableStateOf(state.balances.getOrNull(1)?.category?.id ?: 0L)
+    }
     val accounts = state.balances.filter { it.category.isActive }
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("↔️ Перевод", style = MaterialTheme.typography.titleSmall) },
+        title = { Text("↔️ Перевод между счетами") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Списать (вертикальный список):", style = MaterialTheme.typography.labelSmall)
-                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    accounts.forEach { b ->
-                        val selected = b.category.id == fromId
-                        androidx.compose.material3.Surface(
-                            onClick = { fromId = b.category.id },
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                CategoryAvatar(icon = b.category.icon, size = 24)
-                                Spacer(Modifier.width(8.dp))
-                                Text(b.category.name, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                                if (selected) Text("✓", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    }
-                }
-                Text("Зачислить:", style = MaterialTheme.typography.labelSmall)
-                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    accounts.forEach { b ->
-                        val selected = b.category.id == toId
-                        androidx.compose.material3.Surface(
-                            onClick = { toId = b.category.id },
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                CategoryAvatar(icon = b.category.icon, size = 24)
-                                Spacer(Modifier.width(8.dp))
-                                Text(b.category.name, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                                if (selected) Text("✓", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    }
-                }
+            Column {
+                Text(
+                    text = "Списать со счёта:",
+                    style = MaterialTheme.typography.labelMedium,
+                )
                 Spacer(Modifier.height(4.dp))
-                com.paysplit.app.ui.components.MoneyInputField(value = amountText, onValueChange = { amountText = it }, label = "Сумма, ${state.currency}")
+                com.paysplit.app.ui.components.ChipRow(
+                    options = accounts.map { it.category.id },
+                    selected = fromId,
+                    onSelect = { fromId = it },
+                    label = { id ->
+                        accounts.firstOrNull { it.category.id == id }?.category?.name ?: "?"
+                    },
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Зачислить на счёт:",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Spacer(Modifier.height(4.dp))
+                com.paysplit.app.ui.components.ChipRow(
+                    options = accounts.map { it.category.id },
+                    selected = toId,
+                    onSelect = { toId = it },
+                    label = { id ->
+                        accounts.firstOrNull { it.category.id == id }?.category?.name ?: "?"
+                    },
+                )
+                Spacer(Modifier.height(12.dp))
+                com.paysplit.app.ui.components.MoneyInputField(
+                    value = amountText,
+                    onValueChange = { amountText = it },
+                    label = "Сумма перевода, ${state.currency}",
+                )
             }
         },
         confirmButton = {
-            Button(onClick = {
-                val amount = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
-                if (amount > 0 && fromId != toId && fromId != 0L && toId != 0L) {
-                    viewModel.transfer(fromId, toId, amount)
-                    onDismiss()
-                }
-            }) { Text("Перевести", style = MaterialTheme.typography.labelMedium) }
+            Button(
+                onClick = {
+                    val amount = com.paysplit.app.ui.components.parseMoney(amountText) ?: 0.0
+                    if (amount > 0 && fromId != toId && fromId != 0L && toId != 0L) {
+                        viewModel.transfer(fromId, toId, amount)
+                        onDismiss()
+                    }
+                },
+            ) { Text("Перевести") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", style = MaterialTheme.typography.labelMedium) } },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Отмена") }
+        },
     )
 }

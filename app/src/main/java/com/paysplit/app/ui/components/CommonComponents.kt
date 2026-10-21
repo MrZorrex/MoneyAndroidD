@@ -48,7 +48,7 @@ import com.paysplit.app.data.model.CategoryStatus
 import com.paysplit.app.ui.theme.PayColors
 import com.paysplit.app.util.Formatters
 
-/** Компактная карточка — уменьшены отступы, радиусы и высоты для плотности. */
+/** Карточка-«плитка» с заголовком и содержимым. */
 @Composable
 fun PayCard(
     modifier: Modifier = Modifier,
@@ -57,15 +57,15 @@ fun PayCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(modifier = Modifier.padding(10.dp), content = content)
+        Column(modifier = Modifier.padding(16.dp), content = content)
     }
 }
 
-/** Заголовок секции — компактный. */
+/** Заголовок секции. */
 @Composable
 fun SectionHeader(
     title: String,
@@ -80,18 +80,14 @@ fun SectionHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
             if (subtitle != null) {
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -99,12 +95,12 @@ fun SectionHeader(
     }
 }
 
-/** Кружок с эмодзи-иконкой категории — компактный. */
+/** Кружок с эмодзи-иконкой категории. */
 @Composable
 fun CategoryAvatar(
     icon: String,
     modifier: Modifier = Modifier,
-    size: Int = 32,
+    size: Int = 44,
     background: Color = MaterialTheme.colorScheme.secondaryContainer,
 ) {
     Box(
@@ -114,22 +110,22 @@ fun CategoryAvatar(
             .background(background),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = icon, fontSize = (size / 2.3).toInt().sp)
+        Text(text = icon, fontSize = (size / 2.4).toInt().sp)
     }
 }
 
-/** Анимированный прогресс-бар — компактный. */
+/** Анимированный прогресс-бар. */
 @Composable
 fun AnimatedProgress(
     progress: Float,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary,
     trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
-    height: Int = 5,
+    height: Int = 8,
 ) {
     val animated by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 500),
+        animationSpec = tween(durationMillis = 600),
         label = "progress",
     )
     LinearProgressIndicator(
@@ -140,33 +136,33 @@ fun AnimatedProgress(
             .clip(RoundedCornerShape(height.dp)),
         color = color,
         trackColor = trackColor,
-        strokeCap = StrokeCap.Round,
+        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
     )
 }
 
-/** Точка-индикатор статуса категории — компактный. */
+/** Точка-индикатор статуса категории. */
 @Composable
 fun StatusDot(status: CategoryStatus, modifier: Modifier = Modifier) {
     val color by animateColorAsState(
         targetValue = PayColors.ofStatus(status),
-        animationSpec = tween(300),
+        animationSpec = tween(400),
         label = "status",
     )
     Box(
         modifier = modifier
-            .size(8.dp)
+            .size(12.dp)
             .clip(CircleShape)
             .background(color),
     )
 }
 
-/** Сумма с подписью — компактная типографика. */
+/** Сумма с подписью. */
 @Composable
 fun MoneyValue(
     value: Double,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.titleMedium,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.titleLarge,
     currency: String = "₽",
     maxLines: Int = Int.MAX_VALUE,
 ) {
@@ -192,7 +188,7 @@ fun InfoRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -204,7 +200,6 @@ fun InfoRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Spacer(Modifier.width(8.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
@@ -228,20 +223,20 @@ fun EmptyState(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(20.dp),
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = icon, fontSize = 36.sp)
-        Spacer(Modifier.height(8.dp))
+        Text(text = icon, fontSize = 48.sp)
+        Spacer(Modifier.height(12.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
             text = message,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
@@ -261,9 +256,9 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
-        title = { Text(title, style = MaterialTheme.typography.titleMedium) },
-        text = { Text(text, style = MaterialTheme.typography.bodyMedium) },
+        shape = RoundedCornerShape(24.dp),
+        title = { Text(title) },
+        text = { Text(text) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(
@@ -271,12 +266,11 @@ fun ConfirmDialog(
                     color = if (destructive) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.labelLarge,
                 )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(dismissText, style = MaterialTheme.typography.labelLarge) }
+            TextButton(onClick = onDismiss) { Text(dismissText) }
         },
         icon = if (destructive) {
             { Icon(Icons.Filled.Delete, contentDescription = null) }
@@ -286,7 +280,7 @@ fun ConfirmDialog(
     )
 }
 
-/** Горизонтальный блок из «плиток» с суммами — компактный. */
+/** Горизонтальный блок из «плиток» с суммами. */
 @Composable
 fun StatTile(
     title: String,
@@ -297,25 +291,21 @@ fun StatTile(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         color = container,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(1.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = valueColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -334,11 +324,11 @@ fun PayDivider(modifier: Modifier = Modifier) {
 
 /** Вертикальный отступ. */
 @Composable
-fun VerticalGap(height: Int = 8) = Spacer(Modifier.height(height.dp))
+fun VerticalGap(height: Int = 12) = Spacer(Modifier.height(height.dp))
 
 /** Горизонтальный отступ. */
 @Composable
-fun HorizontalGap(width: Int = 6) = Spacer(Modifier.width(width.dp))
+fun HorizontalGap(width: Int = 8) = Spacer(Modifier.width(width.dp))
 
 /**
  * Тактильный отклик при нажатии: возвращает обработчик нажатия,
@@ -359,14 +349,14 @@ fun hapticClick(action: () -> Unit): () -> Unit {
 @Composable
 fun ExtendedFab(
     text: String,
-    icon: ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.primary,
     contentColor: Color = MaterialTheme.colorScheme.onPrimary,
 ) {
     ExtendedFloatingActionButton(
-        text = { Text(text = text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) },
+        text = { Text(text = text, fontWeight = FontWeight.Bold) },
         icon = { Icon(imageVector = icon, contentDescription = null) },
         onClick = onClick,
         modifier = modifier,
