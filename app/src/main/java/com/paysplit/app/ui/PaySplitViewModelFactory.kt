@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.paysplit.app.data.backup.BackupManager
 import com.paysplit.app.data.repository.PaySplitRepository
+import com.paysplit.app.ui.accounts.AccountsViewModel
 import com.paysplit.app.ui.analytics.AnalyticsViewModel
 import com.paysplit.app.ui.categories.CategoriesViewModel
 import com.paysplit.app.ui.dashboard.DashboardViewModel
@@ -27,6 +28,9 @@ class PaySplitViewModelFactory(
         val viewModel: ViewModel = when {
             modelClass.isAssignableFrom(DashboardViewModel::class.java) ->
                 DashboardViewModel(repository)
+
+            modelClass.isAssignableFrom(AccountsViewModel::class.java) ->
+                AccountsViewModel(repository)
 
             modelClass.isAssignableFrom(CategoriesViewModel::class.java) ->
                 CategoriesViewModel(repository)
