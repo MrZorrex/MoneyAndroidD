@@ -96,7 +96,12 @@ class AddIncomeViewModel(
                     return@launch
                 }
             }
-            form.update { it.copy(initialized = true) }
+            // Для нового поступления — восстанавливаем запомненные галочки
+            val data2 = repository.data.first()
+            val savedIds = data2.settings.lastDistributionExcludedIds.toSet()
+            val activeIds2 = data2.categories.filter { it.isActive }.map { it.id }.toSet()
+            val filtered = savedIds.intersect(activeIds2)
+            form.update { it.copy(excludedIds = filtered, initialized = true) }
         }
     }
 
@@ -221,19 +226,30 @@ class AddIncomeViewModel(
         it.copy(comment = com.paysplit.app.ui.components.capitalizeFirst(comment))
     }
 
+    private fun persistExcludedIds(ids: Set<Long>) {
+        if (incomeId != 0L) return
+        viewModelScope.launch {
+            repository.updateSettings { it.copy(lastDistributionExcludedIds = ids.toList()) }
+        }
+    }
+
     /** Вкл/выкл счёт в распределении. */
     fun toggleCategory(categoryId: Long) {
+        var newExcluded: Set<Long> = emptySet()
         form.update { cur ->
-            val newExcluded = if (categoryId in cur.excludedIds) cur.excludedIds - categoryId else cur.excludedIds + categoryId
+            newExcluded = if (categoryId in cur.excludedIds) cur.excludedIds - categoryId else cur.excludedIds + categoryId
             cur.copy(excludedIds = newExcluded, manual = null)
         }
+        persistExcludedIds(newExcluded)
     }
 
     fun setAllEnabled(enabled: Boolean) {
         viewModelScope.launch {
             val data = repository.data.first()
             val allIds = data.categories.filter { it.isActive }.map { it.id }.toSet()
-            form.update { it.copy(excludedIds = if (enabled) emptySet() else allIds, manual = null) }
+            val newExcluded = if (enabled) emptySet() else allIds
+            form.update { it.copy(excludedIds = newExcluded, manual = null) }
+            persistExcludedIds(newExcluded)
         }
     }
 
@@ -279,6 +295,8 @@ class AddIncomeViewModel(
             // Добавляем исключённые как 0
             effectiveExcluded.forEach { id -> manual[id] = 0.0 }
             form.update { it.copy(excludedIds = effectiveExcluded, manual = manual) }
+            // Если при ручной правке включили счёт — запоминаем
+            if (effectiveExcluded != f.excludedIds) persistExcludedIds(effectiveExcluded)
         }
     }
 
@@ -286,7 +304,10 @@ class AddIncomeViewModel(
     fun resetAuto() = form.update { it.copy(manual = null) }
 
     /** Сброс исключений — включить все счета. */
-    fun resetExcluded() = form.update { it.copy(excludedIds = emptySet(), manual = null) }
+    fun resetExcluded() {
+        form.update { it.copy(excludedIds = emptySet(), manual = null) }
+        persistExcludedIds(emptySet())
+    }
 
     /** Сохранение настроек категории прямо с экрана поступления. */
     fun saveCategory(updated: CategoryEntity) {
@@ -324,6 +345,9 @@ class AddIncomeViewModel(
                     finalAllocations + (freeFunds.id to surplus)
                 }
             }
+
+            // Запоминаем выбор чекбоксов для будущих поступлений
+            if (incomeId == 0L) persistExcludedIds(f.excludedIds)
 
             if (incomeId != 0L) {
                 val existing = repository.getIncome(incomeId) ?: return@launch

@@ -114,7 +114,7 @@ fun AddExpenseScreen(
             )
             Spacer(Modifier.height(6.dp))
             PayCard {
-                Column(modifier = Modifier.heightIn(max = 260.dp)) {
+                Column(modifier = Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
                     state.categories.forEach { category ->
                         val selected = category.id == state.categoryId
                         Row(

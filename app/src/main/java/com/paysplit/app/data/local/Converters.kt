@@ -36,6 +36,14 @@ class Converters {
     fun toStringList(value: String): List<String> =
         if (value.isBlank()) emptyList() else value.split(SEPARATOR)
 
+    @TypeConverter
+    fun fromLongList(value: List<Long>): String =
+        value.joinToString(\",\")
+
+    @TypeConverter
+    fun toLongList(value: String): List<Long> =
+        if (value.isBlank()) emptyList() else value.split(\",\").mapNotNull { it.toLongOrNull() }
+
     private companion object {
         /** Символ-разделитель, который не встречается в названиях трат. */
         const val SEPARATOR = "\u001F"

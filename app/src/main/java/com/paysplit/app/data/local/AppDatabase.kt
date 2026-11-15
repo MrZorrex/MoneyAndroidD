@@ -23,7 +23,7 @@ import com.paysplit.app.data.model.TransferEntity
         BalanceAdjustmentEntity::class,
         SettingsEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

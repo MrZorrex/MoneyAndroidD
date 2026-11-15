@@ -191,6 +191,9 @@ data class SettingsEntity(
     /** Быстрые шаблоны трат. */
     @ColumnInfo(name = "quick_templates")
     val quickTemplates: List<String> = listOf("Продукты", "Бензин", "Обед", "Аптека"),
+    /** Запомненные исключённые счета для экрана «Пришла зарплата» (чекбоксы). */
+    @ColumnInfo(name = "last_distribution_excluded_ids")
+    val lastDistributionExcludedIds: List<Long> = emptyList(),
 ) {
     companion object {
         const val SINGLETON_ID = 1L
