@@ -38,11 +38,11 @@ class Converters {
 
     @TypeConverter
     fun fromLongList(value: List<Long>): String =
-        value.joinToString(\",\")
+        value.joinToString(",")
 
     @TypeConverter
     fun toLongList(value: String): List<Long> =
-        if (value.isBlank()) emptyList() else value.split(\",\").mapNotNull { it.toLongOrNull() }
+        if (value.isBlank()) emptyList() else value.split(",").mapNotNull { it.toLongOrNull() }
 
     private companion object {
         /** Символ-разделитель, который не встречается в названиях трат. */
