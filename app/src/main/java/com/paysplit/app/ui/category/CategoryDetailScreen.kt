@@ -151,7 +151,7 @@ fun CategoryDetailScreen(
                     Spacer(Modifier.height(4.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            "Распр. ${Formatters.money(balance.allocatedThisMonth, state.currency)} из ${Formatters.money(balance.category.monthlyPlan, state.currency)}",
+                            "Распр. ${Formatters.money(balance.allocatedThisMonth, state.currency)} из ${Formatters.money(balance.effectiveMonthlyPlan, state.currency)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f),

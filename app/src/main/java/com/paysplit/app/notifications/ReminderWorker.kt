@@ -55,16 +55,16 @@ class ReminderWorker(
             if (!alreadySent) {
                 val risky = balances.firstOrNull { balance ->
                     balance.category.isActive &&
-                        balance.category.monthlyPlan > 0.005 &&
+                        balance.effectiveMonthlyPlan > 0.005 &&
                         balance.allocatedThisMonth > 0.005 &&
-                        balance.balance in 0.0..(balance.category.monthlyPlan * 0.2)
+                        balance.balance in 0.0..(balance.effectiveMonthlyPlan * 0.2)
                 }
                 if (risky != null) {
                     NotificationHelper.showOverspendWarning(
                         applicationContext,
                         risky.category.name,
                         risky.balance,
-                        risky.category.monthlyPlan,
+                        risky.effectiveMonthlyPlan,
                     )
                     prefs.edit().putString(KEY_OVERSPEND_DATE, todayKey).apply()
                 }

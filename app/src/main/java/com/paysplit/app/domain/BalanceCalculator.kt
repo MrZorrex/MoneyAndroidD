@@ -36,6 +36,10 @@ object BalanceCalculator {
         val monthProgress: Float,
         /** Прогресс к целевой сумме (0..1), для накопительных с целью. */
         val targetProgress: Float,
+        /** Рекомендуемый месячный платёж с учётом уже накопленного (для SAVINGS с целью). */
+        val suggestedMonthlyPlan: Double? = null,
+        /** Эффективный план: suggested если есть цель, иначе хранимый monthlyPlan. */
+        val effectiveMonthlyPlan: Double = 0.0,
     ) {
         val isOverspend: Boolean get() = balance < -0.005
     }
@@ -116,18 +120,28 @@ object BalanceCalculator {
                 CategoryType.SAVINGS -> allocAll - spendAll
             }
 
+            val allTimeBalanceTmp = allocAll - spendAll
+            val suggestedMonthlyPlan = if (category.type == CategoryType.SAVINGS &&
+                category.targetAmount != null && category.targetAmount > 0.005 && category.targetDate != null
+            ) {
+                SavingsPlanner.monthlyPlan(category.targetAmount, allTimeBalanceTmp, category.targetDate)
+            } else {
+                null
+            }
+            val effectiveMonthlyPlan = suggestedMonthlyPlan ?: category.monthlyPlan
+
             val status = when {
                 balance < -0.005 -> CategoryStatus.OVERSPEND
-                category.monthlyPlan > 0.005 && allocMonth >= category.monthlyPlan - 0.005 ->
+                effectiveMonthlyPlan > 0.005 && allocMonth >= effectiveMonthlyPlan - 0.005 ->
                     CategoryStatus.FULL
                 allocMonth > 0.005 -> CategoryStatus.PARTIAL
                 else -> CategoryStatus.NONE
             }
 
-            val remaining = category.monthlyPlan - allocMonth
+            val remaining = effectiveMonthlyPlan - allocMonth
             val monthProgress =
-                if (category.monthlyPlan <= 0.005) 0f
-                else (allocMonth / category.monthlyPlan).toFloat().coerceAtLeast(0f)
+                if (effectiveMonthlyPlan <= 0.005) 0f
+                else (allocMonth / effectiveMonthlyPlan).toFloat().coerceAtLeast(0f)
             val targetProgress =
                 if (category.targetAmount == null || category.targetAmount <= 0.005) 0f
                 else (balance / category.targetAmount).toFloat().coerceAtLeast(0f)
@@ -139,11 +153,13 @@ object BalanceCalculator {
                 allocatedAllTime = allocAll,
                 spentAllTime = spendAll,
                 balance = balance,
-                allTimeBalance = allocAll - spendAll,
+                allTimeBalance = allTimeBalanceTmp,
                 status = status,
                 remainingToPlan = remaining,
                 monthProgress = monthProgress,
                 targetProgress = targetProgress,
+                suggestedMonthlyPlan = suggestedMonthlyPlan,
+                effectiveMonthlyPlan = effectiveMonthlyPlan,
             )
         }
     }
@@ -174,4 +190,34 @@ object BalanceCalculator {
 
     /** Поступления за всё время. */
     fun totalIncomeAllTime(data: AppData): Double = data.incomes.sumOf { it.amount }
+
+    /** Эффективный план для категории с учётом накопленного (для SAVINGS с целью). */
+    fun effectivePlan(category: CategoryEntity, allTimeBalance: Double): Double {
+        if (category.type != CategoryType.SAVINGS) return category.monthlyPlan
+        val target = category.targetAmount ?: return category.monthlyPlan
+        val date = category.targetDate ?: return category.monthlyPlan
+        if (target <= 0.005) return category.monthlyPlan
+        return SavingsPlanner.monthlyPlan(target, allTimeBalance, date)
+    }
+
+    /** Карта allTime баланса по категориям (для распределения). */
+    fun allTimeBalances(data: AppData): Map<Long, Double> {
+        val inflowAll = data.distributions.groupBy { it.categoryId }.mapValues { e -> e.value.sumOf { it.amount } }.toMutableMap()
+        val outflowAll = data.expenses.groupBy { it.categoryId }.mapValues { e -> e.value.sumOf { it.amount } }.toMutableMap()
+        data.transfers.forEach { t ->
+            inflowAll[t.toCategoryId] = (inflowAll[t.toCategoryId] ?: 0.0) + t.amount
+            outflowAll[t.fromCategoryId] = (outflowAll[t.fromCategoryId] ?: 0.0) + t.amount
+        }
+        data.adjustments.groupBy { it.categoryId }.mapValues { e -> e.value.sumOf { it.amount } }.forEach { (catId, delta) ->
+            if (delta >= 0) inflowAll[catId] = (inflowAll[catId] ?: 0.0) + delta
+            else outflowAll[catId] = (outflowAll[catId] ?: 0.0) + (-delta)
+        }
+        val result = mutableMapOf<Long, Double>()
+        data.categories.forEach { cat ->
+            val allocAll = inflowAll[cat.id] ?: 0.0
+            val spendAll = outflowAll[cat.id] ?: 0.0
+            result[cat.id] = allocAll - spendAll
+        }
+        return result
+    }
 }

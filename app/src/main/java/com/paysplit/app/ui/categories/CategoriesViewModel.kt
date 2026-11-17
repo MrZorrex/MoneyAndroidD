@@ -55,7 +55,7 @@ class CategoriesViewModel(private val repository: PaySplitRepository) : ViewMode
             .sortedBy { it.category.sortOrder }
         CategoriesUiState(
             items = items,
-            totalPlan = data.totalMonthlyPlan,
+            totalPlan = items.filter { it.category.isActive }.sumOf { it.effectiveMonthlyPlan },
             currency = data.settings.currency,
         )
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CategoriesUiState())

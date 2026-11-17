@@ -118,34 +118,39 @@ class AddIncomeViewModel(
         // уже_распределено считаем как в BalanceCalculator: распределения + входящие переводы + положительные коррекции
         val monthStart = DateUtils.monthStart(f.date)
         val monthEnd = DateUtils.monthEnd(f.date)
+        val allTimeBalances = com.paysplit.app.domain.BalanceCalculator.allTimeBalances(data)
         fun allocatedFor(catId: Long): Double {
             val d = data.distributions.filter { it.categoryId == catId && it.date in monthStart..monthEnd && it.incomeId != incomeId }.sumOf { it.amount }
             val tIn = data.transfers.filter { it.toCategoryId == catId && it.date in monthStart..monthEnd }.sumOf { it.amount }
             val adjPos = data.adjustments.filter { it.categoryId == catId && it.date in monthStart..monthEnd && it.amount > 0 }.sumOf { it.amount }
             return d + tIn + adjPos
         }
+        fun effectivePlanFor(cat: com.paysplit.app.data.model.CategoryEntity): Double =
+            com.paysplit.app.domain.BalanceCalculator.effectivePlan(cat, allTimeBalances[cat.id] ?: 0.0)
         val uiAllocations = allActive.map { cat ->
             if (cat.id in f.excludedIds) {
                 val allocated = allocatedFor(cat.id)
+                val eff = effectivePlanFor(cat)
                 DistributionCalculator.Allocation(
                     categoryId = cat.id,
                     categoryName = cat.name,
                     icon = cat.icon,
-                    plan = cat.monthlyPlan,
+                    plan = eff,
                     alreadyAllocated = allocated,
-                    remainder = max(0.0, cat.monthlyPlan - allocated),
+                    remainder = max(0.0, eff - allocated),
                     amount = 0.0,
                 )
             } else {
                 includedMap[cat.id] ?: run {
                     val allocated = allocatedFor(cat.id)
+                    val eff = effectivePlanFor(cat)
                     DistributionCalculator.Allocation(
                         categoryId = cat.id,
                         categoryName = cat.name,
                         icon = cat.icon,
-                        plan = cat.monthlyPlan,
+                        plan = eff,
                         alreadyAllocated = allocated,
-                        remainder = max(0.0, cat.monthlyPlan - allocated),
+                        remainder = max(0.0, eff - allocated),
                         amount = 0.0,
                     )
                 }
@@ -195,6 +200,7 @@ class AddIncomeViewModel(
     ): DistributionCalculator.Result {
         val monthStart = DateUtils.monthStart(f.date)
         val monthEnd = DateUtils.monthEnd(f.date)
+        val allTimeBalances2 = com.paysplit.app.domain.BalanceCalculator.allTimeBalances(data)
         val inputs = data.categories
             .filter { it.isActive && it.id !in f.excludedIds }
             .sortedBy { it.sortOrder }
@@ -203,11 +209,12 @@ class AddIncomeViewModel(
                 val tIn = data.transfers.filter { it.toCategoryId == category.id && it.date in monthStart..monthEnd }.sumOf { it.amount }
                 val adjPos = data.adjustments.filter { it.categoryId == category.id && it.date in monthStart..monthEnd && it.amount > 0 }.sumOf { it.amount }
                 val allocated = d + tIn + adjPos
+                val eff = com.paysplit.app.domain.BalanceCalculator.effectivePlan(category, allTimeBalances2[category.id] ?: 0.0)
                 DistributionCalculator.CategoryInput(
                     id = category.id,
                     name = category.name,
                     icon = category.icon,
-                    monthlyPlan = category.monthlyPlan,
+                    monthlyPlan = eff,
                     allocatedThisMonth = allocated,
                 )
             }

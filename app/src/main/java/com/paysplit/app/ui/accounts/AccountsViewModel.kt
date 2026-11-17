@@ -65,7 +65,7 @@ class AccountsViewModel(private val repository: PaySplitRepository) : ViewModel(
             .sortedBy { it.category.sortOrder }
         AccountsUiState(
             items = items,
-            totalPlan = data.totalMonthlyPlan,
+            totalPlan = items.filter { it.category.isActive }.sumOf { it.effectiveMonthlyPlan },
             currency = data.settings.currency,
             totalBalance = BalanceCalculator.totalBalance(data),
         )

@@ -358,7 +358,7 @@ private fun DraggableCategoryList(
                         }
                         Text(
                             text = "План " +
-                                Formatters.money(item.category.monthlyPlan, currency) +
+                                Formatters.money(item.effectiveMonthlyPlan, currency) +
                                 " · $percent% · $remainingText",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

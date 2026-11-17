@@ -95,7 +95,7 @@ object PdfReportGenerator {
             if (y > PAGE_HEIGHT - MARGIN - 60f) return@forEach
             val name = "${balance.category.icon} ${balance.category.name}".take(28)
             canvas.drawText(name, colX[0], y, textPaint)
-            canvas.drawText(Formatters.money(balance.category.monthlyPlan, ""), colX[1], y, textPaint)
+            canvas.drawText(Formatters.money(balance.effectiveMonthlyPlan, ""), colX[1], y, textPaint)
             canvas.drawText(Formatters.money(balance.allocatedThisMonth, ""), colX[2], y, textPaint)
             canvas.drawText(Formatters.money(balance.spentThisMonth, ""), colX[3], y, textPaint)
             canvas.drawText(Formatters.money(balance.balance, ""), colX[4], y, textPaint)

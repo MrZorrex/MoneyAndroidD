@@ -56,6 +56,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.paysplit.app.data.model.CategoryType
+import com.paysplit.app.domain.SavingsPlanner
 import com.paysplit.app.ui.LocalViewModelFactory
 import com.paysplit.app.ui.components.AnimatedProgress
 import com.paysplit.app.ui.components.CategoryAvatar
@@ -277,8 +278,15 @@ private fun CompactAccountCard(
                 Text(
                     text = buildString {
                         append(if (item.category.type == CategoryType.SAVINGS) "Накоп. " else "Расх. ")
-                        append("план ${Formatters.money(item.category.monthlyPlan, currency)} · $percent% · $remainingText")
-                        if (item.category.targetAmount != null) append(" · цель ${Formatters.money(item.category.targetAmount, currency)}")
+                        append("план ${Formatters.money(item.effectiveMonthlyPlan, currency)} · $percent% · $remainingText")
+                        if (item.category.targetAmount != null) {
+                            append(" · цель ${Formatters.money(item.category.targetAmount, currency)}")
+                            item.suggestedMonthlyPlan?.let { s ->
+                                if (item.category.monthlyPlan > 0.005 && kotlin.math.abs(s - item.category.monthlyPlan) > 0.01) {
+                                    append(" · было ${Formatters.money(item.category.monthlyPlan, currency)}")
+                                }
+                            }
+                        }
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -399,6 +407,7 @@ private fun AccountEditorDialog(
                             label = "Дата цели",
                         )
                     }
+                    item { SavingsPlanHint(editor = editor, currency = currency) }
                 }
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -414,6 +423,42 @@ private fun AccountEditorDialog(
                 }
                 item { TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Отмена") } }
                 item { Spacer(Modifier.height(16.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavingsPlanHint(editor: AccountEditorState, currency: String) {
+    val target = com.paysplit.app.ui.components.parseMoney(editor.targetText)
+    val date = editor.targetDate
+    if (target == null || target <= 0 || date == null) return
+    val saved = editor.savedAmount
+    val plan = SavingsPlanner.monthlyPlan(target, saved, date)
+    val months = SavingsPlanner.monthsLeft(date)
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                "Расчёт: цель ${Formatters.money(target, currency)} · накоплено ${Formatters.money(saved, currency)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                "Осталось ${Formatters.money(maxOf(0.0, target - saved), currency)} на $months ${SavingsPlanner.monthsWord(months)} → ${Formatters.money(plan, currency)}/мес.",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            if (saved > 0.005) {
+                Text(
+                    "С учётом уже накопленных ${Formatters.money(saved, currency)} план пересчитан задним числом.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
             }
         }
     }
